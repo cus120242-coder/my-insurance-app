@@ -125,3 +125,4 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .membertools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 10px; font-size: 14px; }
 .membertools:empty { display: none; }
 .panel.tpl { border: 2px solid var(--brand); }
+.memo { font-size: 13px; margin-top: 6px; } .memo summary { cursor: pointer; color: var(--brand); } .memo ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }

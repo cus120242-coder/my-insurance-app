@@ -39,7 +39,7 @@ function coverageMatchesCode(cov, code) {
 
 /**
  * 청구 가능 여부 계산
- * event = { code, date, diagnosis, surgery, surgeryClass, hospitalDays, outpatientVisits, medicalCost, preExisting }
+ * event = { code, date, diagnosis, surgery, surgeryClass, hospitalDays, icuDays, outpatientVisits, medicalCost, preExisting }
  * 결과: 보장마다 { status: "가능" | "확인필요" | "불가", amount, reasons[] }
  */
 function checkClaim(policies, event) {
@@ -55,7 +55,8 @@ function checkClaim(policies, event) {
       const codesUnknown = !cov.codes || !cov.codes.length;
 
       // 1) 이 사건이 이 보장 종류에 해당하나?
-      const days = Number(event.hospitalDays) || 0;
+      // 중환자실 입원비는 중환자실에 있던 날만 세요
+      const days = cov.icuOnly ? Number(event.icuDays) || 0 : Number(event.hospitalDays) || 0;
       const visits = Number(event.outpatientVisits) || 0;
       const cost = Number(event.medicalCost) || 0;
       if (cov.category === "진단" && !event.diagnosis) continue;

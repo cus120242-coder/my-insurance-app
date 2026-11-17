@@ -107,6 +107,8 @@ function renderHome() {
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
           <div><span class="tag owner">👤 ${esc(ownerOf(p))}</span><span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
+          ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
           <div class="doclinks">${Object.keys(DOC_KINDS).map((k) => p.docs && p.docs[k]
             ? `<button class="tag have" data-view="${esc(p.id)}" data-kind="${k}">✅ ${k} 보기</button>`
@@ -197,6 +199,7 @@ $("#runClaim").addEventListener("click", () => {
     surgeryClass: $("#cSurgClass").value,
     preExisting: $("#cPre").checked,
     hospitalDays: $("#cDays").value,
+    icuDays: $("#cIcu").value,
     outpatientVisits: $("#cVisits").value,
     medicalCost: $("#cCost").value,
   };
@@ -274,7 +277,7 @@ $("#covRows").addEventListener("click", (e) => { if (e.target.closest("[data-rm]
 function fillForm(p = {}, keepFiles = false) {
   editingId = p.id || null;
   editingDocs = { ...(p.docs || {}) };
-  editingExtra = { templateId: p.templateId, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units };
+  editingExtra = { templateId: p.templateId, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote };
   if (!keepFiles) {
     pendingFiles = { 증권: null, 약관: null };
     $("#docPolicy").value = "";

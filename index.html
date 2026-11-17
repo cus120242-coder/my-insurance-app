@@ -7,6 +7,18 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- 잠금 화면 -->
+  <div id="lock" class="lock hidden">
+    <div class="lockbox">
+      <div class="lockicon">🔒</div>
+      <h2>비밀번호 4자리</h2>
+      <input id="lockPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" />
+      <button class="btn big" id="lockOpen">열기</button>
+      <div id="lockMsg" class="hint"></div>
+      <button class="btn small ghost" id="lockForgot">비밀번호를 잊었어요</button>
+    </div>
+  </div>
+
   <header class="top">
     <h1>🛡️ 내 보험 한눈에</h1>
     <p class="sub">여기저기 가입한 보험, 한 곳에서 보고 청구까지 확인해요</p>
@@ -23,6 +35,7 @@
   <main>
     <!-- 1. 내 보험 -->
     <section id="tab-home" class="tab active">
+      <div id="family" class="family"></div>
       <div id="summary" class="cards3"></div>
       <div id="policyList"></div>
       <div id="emptyHome" class="empty hidden">
@@ -42,6 +55,9 @@
     <section id="tab-claim" class="tab">
       <div class="panel">
         <h2>어떤 일이 있었나요?</h2>
+        <label>누가 아팠나요?
+          <select id="cWho"></select>
+        </label>
         <label>질병코드 (진단서에 적힌 코드)
           <input id="cCode" placeholder="예: C50, I63, S82" autocomplete="off" />
         </label>
@@ -98,6 +114,10 @@
       <div class="panel">
         <h2>② 내용 확인하고 저장</h2>
         <p class="hint">AI가 읽은 내용이 맞는지 <b>증권과 꼭 비교</b>해보세요. 틀린 칸은 고치면 돼요.</p>
+        <label>👤 누구 보험이에요? (보장받는 사람)
+          <input id="fOwner" list="ownerList" placeholder="예: 나, 엄마, 첫째" />
+          <datalist id="ownerList"></datalist>
+        </label>
         <div class="row2">
           <label>보험사 <input id="fCompany" /></label>
           <label>상품 이름 <input id="fProduct" /></label>
@@ -107,6 +127,10 @@
             <select id="fType"><option>정액</option><option>실손</option></select>
           </label>
           <label>월 보험료(원) <input id="fPremium" type="number" min="0" /></label>
+        </div>
+        <div class="row2">
+          <label>납입일 (매월 며칠) <input id="fPayDay" type="number" min="1" max="31" placeholder="예: 25" /></label>
+          <label>고객센터 번호 <input id="fPhone" type="tel" placeholder="증권에 적힌 번호" /></label>
         </div>
         <div class="row2">
           <label>가입일 <input id="fStart" type="date" /></label>
@@ -133,7 +157,19 @@
         <button class="btn" id="saveSettings">저장</button>
       </div>
       <div class="panel">
-        <h2>내 데이터</h2>
+        <h2>🔒 숫자 4자리 잠금</h2>
+        <p class="hint" id="pinState"></p>
+        <label>새 비밀번호 4자리 <input id="sPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></label>
+        <div class="actions">
+          <button class="btn" id="setPin">잠금 켜기 / 바꾸기</button>
+          <button class="btn ghost" id="removePin">잠금 끄기</button>
+        </div>
+        <p class="hint">※ 다른 사람이 화면을 못 열게 막는 "문 잠금"이에요. 기기 안의 자료 자체를 암호로 바꾸는 건 아니라서, 휴대폰 잠금도 꼭 같이 쓰세요.</p>
+      </div>
+
+      <div class="panel">
+        <h2>내 데이터 · 가족과 나누기</h2>
+        <p class="hint">👨‍👩‍👧 가족 공유: "백업 파일 받기"로 만든 파일을 카톡 등으로 보내고, 받은 사람이 "백업 불러오기"를 누르면 돼요. 이미 있는 보험은 그대로 두고 합쳐져요.</p>
         <p class="hint">보험 정보와 증권·약관 파일은 서버로 가지 않고 이 기기에만 저장돼요. (AI로 읽을 때만 제미나이에 보내요) 백업 파일에는 보장 내용만 들어가고, 증권·약관 원본 파일은 빠져요.</p>
         <div class="actions">
           <button class="btn ghost" id="exportData">📤 백업 파일 받기</button>

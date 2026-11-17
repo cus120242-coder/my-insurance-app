@@ -11,6 +11,8 @@ const GEMINI_PROMPT = `너는 한국 보험증권과 약관을 읽는 전문가�
   "startDate": "YYYY-MM-DD (계약일/보장 시작일)",
   "endDate": "YYYY-MM-DD (만기일, 모르면 빈 문자열)",
   "premium": 월 보험료 숫자(원),
+  "payDay": 매월 납입일 숫자 (서류에 없으면 null),
+  "phone": "서류에 적힌 보험사 고객센터 전화번호 (없으면 빈 문자열)",
   "coverages": [
     {
       "name": "담보(보장) 이름 그대로",

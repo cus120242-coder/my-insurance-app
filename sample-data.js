@@ -2,6 +2,7 @@
 const SAMPLE_POLICIES = [
   {
     id: "sample-1",
+    owner: "나",
     company: "예시손해보험",
     product: "튼튼 건강보험",
     type: "정액",
@@ -18,6 +19,7 @@ const SAMPLE_POLICIES = [
   },
   {
     id: "sample-2",
+    owner: "엄마",
     company: "샘플생명",
     product: "든든 종합보험",
     type: "정액",
@@ -34,6 +36,7 @@ const SAMPLE_POLICIES = [
   },
   {
     id: "sample-3",
+    owner: "나",
     company: "예시손해보험",
     product: "실손의료보험 (4세대)",
     type: "실손",
@@ -44,6 +47,7 @@ const SAMPLE_POLICIES = [
   },
   {
     id: "sample-4",
+    owner: "나",
     company: "모의화재",
     product: "옛날 실손보험",
     type: "실손",

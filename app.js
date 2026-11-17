@@ -37,6 +37,13 @@ let pendingFiles = { 증권: null, 약관: null };
 let editingId = null;
 const save = () => store.set("policies", policies);
 
+// ---------- 가족 ----------
+const ownerOf = (p) => (p.owner || "").trim() || "나";
+const members = () => [...new Set(policies.map(ownerOf))];
+let currentMember = "전체";
+const visible = () => (currentMember === "전체" ? policies : policies.filter((p) => ownerOf(p) === currentMember));
+const monthly = (list) => list.reduce((s, p) => s + (Number(p.premium) || 0), 0);
+
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
@@ -51,6 +58,7 @@ function showTab(name) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + name));
   if (name === "home") renderHome();
   if (name === "overlap") renderOverlap();
+  if (name === "claim") fillWho();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -60,20 +68,30 @@ document.addEventListener("click", (e) => { const g = e.target.closest("[data-go
 function renderHome() {
   const empty = policies.length === 0;
   $("#emptyHome").classList.toggle("hidden", !empty);
-  const premium = policies.reduce((s, p) => s + (Number(p.premium) || 0), 0);
-  const covCount = policies.reduce((s, p) => s + (p.coverages || []).length, 0);
-  $("#summary").innerHTML = empty ? "" : `
-    <div class="stat"><div class="k">가입한 보험</div><div class="v">${policies.length}개</div></div>
-    <div class="stat"><div class="k">보장 항목</div><div class="v">${covCount}개</div></div>
-    <div class="stat"><div class="k">월 보험료 합계</div><div class="v">${won(premium)}</div></div>`;
+  if (currentMember !== "전체" && !members().includes(currentMember)) currentMember = "전체";
+  const fam = members();
+  $("#family").innerHTML = empty ? "" : [["전체", policies], ...fam.map((m) => [m, policies.filter((p) => ownerOf(p) === m)])].map(([m, list]) => `
+    <button class="fam ${m === currentMember ? "active" : ""}" data-member="${esc(m)}">
+      <div class="who">${m === "전체" ? "👨‍👩‍👧 가족 전체" : "👤 " + esc(m)}</div>
+      <div class="sm">보험 ${list.length}개</div>
+      <div class="money">월 ${won(monthly(list))}</div>
+    </button>`).join("");
 
-  $("#policyList").innerHTML = policies.map((p) => `
+  const list = visible();
+  const covCount = list.reduce((s, p) => s + (p.coverages || []).length, 0);
+  $("#summary").innerHTML = empty ? "" : `
+    <div class="stat"><div class="k">${currentMember === "전체" ? "가입한 보험" : esc(currentMember) + "의 보험"}</div><div class="v">${list.length}개</div></div>
+    <div class="stat"><div class="k">보장 항목</div><div class="v">${covCount}개</div></div>
+    <div class="stat"><div class="k">월 보험료 합계</div><div class="v">${won(monthly(list))}</div></div>`;
+
+  $("#policyList").innerHTML = list.map((p) => `
     <article class="policy">
       <header>
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag">월 ${won(p.premium)}</span>` : ""}</div>
+          <div><span class="tag owner">👤 ${esc(ownerOf(p))}</span><span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
           <div class="doclinks">${Object.keys(DOC_KINDS).map((k) => p.docs && p.docs[k]
             ? `<button class="tag have" data-view="${esc(p.id)}" data-kind="${k}">✅ ${k} 보기</button>`
             : `<span class="tag miss">⚠️ ${k} 없음</span>`).join("")}</div>
@@ -110,6 +128,10 @@ $("#policyList").addEventListener("click", (e) => {
   }
   if (edit) { fillForm(policies.find((p) => p.id === edit.dataset.edit)); showTab("add"); }
 });
+$("#family").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-member]");
+  if (b) { currentMember = b.dataset.member; renderHome(); }
+});
 $("#loadSample").addEventListener("click", () => {
   policies = JSON.parse(JSON.stringify(SAMPLE_POLICIES));
   save(); renderHome(); toast("예시 보험을 불러왔어요");
@@ -117,6 +139,11 @@ $("#loadSample").addEventListener("click", () => {
 
 // ---------- 2. 청구 확인 ----------
 $("#cDate").value = new Date().toISOString().slice(0, 10);
+function fillWho() {
+  const fam = members();
+  const prev = $("#cWho").value;
+  $("#cWho").innerHTML = fam.map((m) => `<option ${m === prev || (!prev && m === currentMember) ? "selected" : ""}>${esc(m)}</option>`).join("");
+}
 $("#cCode").addEventListener("input", () => {
   const v = $("#cCode").value.trim();
   const p = parseCode(v);
@@ -134,12 +161,12 @@ $("#runClaim").addEventListener("click", () => {
   };
   if (!parseCode(event.code)) { toast("질병코드를 먼저 넣어주세요 (예: C50)"); return; }
   if (!policies.length) { toast("먼저 보험을 등록해주세요"); return; }
-
-  const { results, total } = checkClaim(policies, event);
+  const who = $("#cWho").value;
+  const { results, total } = checkClaim(policies.filter((p) => ownerOf(p) === who), event);
   const label = { 가능: "✅ 청구 가능", 확인필요: "⚠️ 확인 필요", 불가: "❌ 해당 안 됨" };
   $("#claimResult").innerHTML = `
     <div class="total">
-      <div class="k">${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — 예상 보험금 합계</div>
+      <div class="k">👤 ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — 예상 보험금 합계</div>
       <div class="v">${won(total)}</div>
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
     </div>
@@ -159,10 +186,14 @@ $("#runClaim").addEventListener("click", () => {
 
 // ---------- 3. 중복 체크 ----------
 function renderOverlap() {
-  const list = findOverlaps(policies);
   if (!policies.length) { $("#overlapResult").innerHTML = `<div class="empty">먼저 보험을 등록해주세요.</div>`; return; }
-  if (!list.length) { $("#overlapResult").innerHTML = `<div class="box info"><h3>👍 겹치는 보장이 없어요</h3>서로 다른 보험끼리 같은 보장이 발견되지 않았어요.</div>`; return; }
-  $("#overlapResult").innerHTML = list.map((o) => `
+  $("#overlapResult").innerHTML = `<p class="hint">겹치는 보장은 <b>같은 사람</b>의 보험끼리만 비교해요.</p>` + members().map((m) => {
+    const list = findOverlaps(policies.filter((p) => ownerOf(p) === m));
+    return `<h3 class="person">👤 ${esc(m)}</h3>` + (list.length ? overlapHTML(list) : `<div class="box info">👍 겹치는 보장이 없어요</div>`);
+  }).join("");
+}
+function overlapHTML(list) {
+  return list.map((o) => `
     <div class="box ${o.kind}">
       <h3>${o.kind === "warn" ? "⚠️" : "ℹ️"} ${esc(o.name)} — ${o.items.length}곳에 있어요</h3>
       <p>${esc(o.message)}</p>
@@ -208,6 +239,10 @@ function fillForm(p = {}, keepFiles = false) {
     $("#aiStatus").textContent = "";
   }
   showDocState();
+  $("#fOwner").value = p.owner || (currentMember !== "전체" ? currentMember : "");
+  $("#ownerList").innerHTML = members().map((m) => `<option value="${esc(m)}">`).join("");
+  $("#fPayDay").value = p.payDay || "";
+  $("#fPhone").value = p.phone || "";
   $("#fCompany").value = p.company || "";
   $("#fProduct").value = p.product || "";
   $("#fType").value = p.type === "실손" ? "실손" : "정액";
@@ -245,6 +280,9 @@ function readForm() {
   }).filter((c) => c.name);
   return {
     id: editingId || "p-" + Date.now(),
+    owner: $("#fOwner").value.trim() || "나",
+    payDay: Number($("#fPayDay").value) || "",
+    phone: $("#fPhone").value.trim(),
     company: $("#fCompany").value.trim(),
     product: $("#fProduct").value.trim(),
     type: $("#fType").value,
@@ -281,7 +319,7 @@ $("#aiRun").addEventListener("click", async () => {
   btn.disabled = true;
   try {
     const p = await askGemini({ apiKey: s.key, model: s.model, policyFile, termsFile, text, onStep: (m) => ($("#aiStatus").textContent = m) });
-    fillForm({ ...p, id: editingId, docs: editingDocs }, true);
+    fillForm({ ...p, id: editingId, docs: editingDocs, owner: $("#fOwner").value }, true);
     const n = (p.coverages || []).length;
     $("#aiStatus").textContent = `✅ 다 읽었어요! 보장 ${n}개를 찾았어요.` + (termsFile ? "" : " (약관이 없어서 면책·감액 같은 조건은 비어 있을 수 있어요)") + " ② 에서 확인하고 저장하세요.";
   } catch (err) {
@@ -310,12 +348,52 @@ $("#importData").addEventListener("change", async (e) => {
   try {
     const data = JSON.parse(await e.target.files[0].text());
     if (!Array.isArray(data)) throw new Error();
-    policies = data; save(); toast("불러왔어요"); showTab("home");
+    let added = 0, updated = 0;
+    for (const p of data) {
+      const i = policies.findIndex((x) => x.id === p.id);
+      if (i >= 0) { policies[i] = p; updated++; } else { policies.push(p); added++; }
+    }
+    save(); toast(`새로 ${added}개, 바뀐 것 ${updated}개를 합쳤어요`); showTab("home");
   } catch { toast("백업 파일이 아닌 것 같아요"); }
+  e.target.value = "";
 });
 $("#clearData").addEventListener("click", () => {
   if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; save(); renderHome(); toast("전부 지웠어요"); }
 });
+
+// ---------- 잠금 (숫자 4자리) ----------
+async function hashPin(pin) {
+  const data = new TextEncoder().encode("insurance-app:" + pin);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const pinOk = (v) => /^\d{4}$/.test(v);
+function showPinState() { $("#pinState").textContent = store.get("pin", null) ? "✅ 지금 잠금이 켜져 있어요" : "지금은 잠금이 꺼져 있어요"; }
+$("#setPin").addEventListener("click", async () => {
+  const v = $("#sPin").value.trim();
+  if (!pinOk(v)) return toast("숫자 4자리를 넣어주세요");
+  store.set("pin", await hashPin(v));
+  $("#sPin").value = ""; showPinState(); toast("잠금을 켰어요. 다음에 열 때 물어봐요");
+});
+$("#removePin").addEventListener("click", () => {
+  if (!store.get("pin", null)) return toast("잠금이 이미 꺼져 있어요");
+  if (confirm("잠금을 끌까요?")) { localStorage.removeItem("pin"); showPinState(); toast("잠금을 껐어요"); }
+});
+async function tryUnlock() {
+  const v = $("#lockPin").value.trim();
+  if (pinOk(v) && (await hashPin(v)) === store.get("pin", null)) { $("#lock").classList.add("hidden"); $("#lockPin").value = ""; }
+  else { $("#lockMsg").textContent = "비밀번호가 달라요"; $("#lockPin").value = ""; }
+}
+$("#lockOpen").addEventListener("click", tryUnlock);
+$("#lockPin").addEventListener("input", () => { if ($("#lockPin").value.length === 4) tryUnlock(); });
+$("#lockForgot").addEventListener("click", async () => {
+  if (!confirm("비밀번호는 되찾을 수 없어요. 이 기기에 저장된 보험과 파일을 전부 지우고 처음부터 시작할까요?")) return;
+  localStorage.clear();
+  try { indexedDB.deleteDatabase("insurance-files"); } catch {}
+  location.reload();
+});
+if (store.get("pin", null)) { $("#lock").classList.remove("hidden"); setTimeout(() => $("#lockPin").focus(), 50); }
+showPinState();
 
 fillForm();
 renderHome();

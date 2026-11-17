@@ -124,3 +124,4 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .fam.add { min-width: 90px; text-align: center; color: var(--brand); border-style: dashed; font-weight: 700; }
 .membertools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 10px; font-size: 14px; }
 .membertools:empty { display: none; }
+.panel.tpl { border: 2px solid var(--brand); }

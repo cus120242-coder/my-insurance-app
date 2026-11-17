@@ -55,24 +55,32 @@ const KCD_DICT = [
   { code: "S06", name: "머리 손상 (뇌진탕 등)" },
 ];
 
-// "C50.9" → { letter: "C", major: 50, index: 250 }  (A=0, B=1, C=2 ... 로 바꿔서 숫자로 비교)
+// "C50.9" → { letter: "C", major: 50, minor: "9", index: 250 }  (A=0, B=1, C=2 ... 로 바꿔서 숫자로 비교)
 function parseCode(code) {
   const m = String(code).trim().toUpperCase().match(/^([A-Z])\s*(\d{1,2})(?:\.?(\d*))?$/);
   if (!m) return null;
   const letter = m[1];
   const major = parseInt(m[2], 10);
-  return { letter, major, index: (letter.charCodeAt(0) - 65) * 100 + major, raw: `${letter}${String(major).padStart(2, "0")}${m[3] ? "." + m[3] : ""}` };
+  const minor = m[3] || "";
+  return { letter, major, minor, index: (letter.charCodeAt(0) - 65) * 100 + major, raw: `${letter}${String(major).padStart(2, "0")}${minor ? "." + minor : ""}` };
 }
 
-// "C00-C97" 또는 "C50" 같은 범위 안에 코드가 들어가는지
+// 범위 비교용 숫자: "D47" 은 D47.0~D47.9 전체, "D47.1" 은 D47.1(과 D47.1x)만
+function codeValue(c, asEnd) {
+  if (!c.minor) return c.index + (asEnd ? 0.99999 : 0);
+  const frac = Number("0." + c.minor);
+  return c.index + (asEnd ? frac + Math.pow(10, -c.minor.length) - 0.00001 : frac);
+}
+
+// "C00-C97", "C50", "D47.1" 같은 범위 안에 코드가 들어가는지
 function codeInRange(code, range) {
   if (range === "*") return true;
   const c = typeof code === "string" ? parseCode(code) : code;
   if (!c) return false;
   const [a, b] = String(range).split("-").map((s) => parseCode(s));
   if (!a) return false;
-  const end = b || a;
-  return c.index >= a.index && c.index <= end.index;
+  const v = codeValue(c, false);
+  return v >= codeValue(a, false) && v <= codeValue(b || a, true);
 }
 
 // 여러 범위 중 하나라도 맞으면 true

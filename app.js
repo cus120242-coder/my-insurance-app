@@ -68,6 +68,11 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) showTab(g.dataset.goto); });
 
 // ---------- 1. 내 보험 ----------
+function shortCodes(codes) {
+  if (!codes || !codes.length) return "코드 미등록";
+  if (codes.includes("*")) return "모든 질병/상해";
+  return codes.length > 4 ? codes.slice(0, 4).join(", ") + ` 외 ${codes.length - 4}개` : codes.join(", ");
+}
 function renderHome() {
   const empty = policies.length === 0;
   $("#emptyHome").classList.toggle("hidden", !empty);
@@ -105,8 +110,9 @@ function renderHome() {
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
           <div class="doclinks">${Object.keys(DOC_KINDS).map((k) => p.docs && p.docs[k]
             ? `<button class="tag have" data-view="${esc(p.id)}" data-kind="${k}">✅ ${k} 보기</button>`
+            : k === "약관" && p.termsSource ? `<span class="tag have">📘 약관 정리본</span>`
             : `<span class="tag miss">⚠️ ${k} 없음</span>`).join("")}</div>
-          ${!(p.docs && p.docs.약관) ? `<div class="meta">약관이 없어서 질병코드·면책·감액 조건을 확인 못 했어요</div>` : ""}
+          ${p.termsSource ? `<div class="meta">📘 약관 규칙: 디디가 정리한 「${esc(p.termsSource)}」${p.units ? ` · 주계약 ${esc(p.units.main)}구좌` : ""}</div>` : !(p.docs && p.docs.약관) ? `<div class="meta">약관이 없어서 질병코드·면책·감액 조건을 확인 못 했어요</div>` : ""}
         </div>
         <div>
           <button class="btn small ghost" data-edit="${esc(p.id)}">수정</button>
@@ -116,8 +122,8 @@ function renderHome() {
       <table class="covs">
         ${(p.coverages || []).map((c) => `
           <tr>
-            <td>${esc(c.name)}<div class="codes">${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc((c.codes || ["*"]).join(", ").replace("*", "모든 질병/상해"))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}</div></td>
-            <td class="amt">${won(c.amount)}${c.category === "입원" || c.category === "통원" ? "/일·회" : ""}</td>
+            <td>${esc(c.name)}${c.paidBefore ? ` <span class="tag miss">이미 받음</span>` : ""}<div class="codes">${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc(shortCodes(c.codes))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}</div></td>
+            <td class="amt">${c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${k}종 ${won(v)}`).join("<br />") : won(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
           </tr>`).join("")}
       </table>
     </article>`).join("");
@@ -188,6 +194,8 @@ $("#runClaim").addEventListener("click", () => {
     date: $("#cDate").value,
     diagnosis: $("#cDiag").checked,
     surgery: $("#cSurg").checked,
+    surgeryClass: $("#cSurgClass").value,
+    preExisting: $("#cPre").checked,
     hospitalDays: $("#cDays").value,
     outpatientVisits: $("#cVisits").value,
     medicalCost: $("#cCost").value,
@@ -255,6 +263,7 @@ function covRowHTML(c = {}) {
       </div>
       <label>근거 (약관 몇 조, 몇 쪽) <input data-f="source" value="${esc(c.source)}" placeholder="예: 약관 제3조 p.45" /></label>
       ${c.note ? `<div class="hint">💬 ${esc(c.note)}</div>` : ""}
+      <label class="chk"><input type="checkbox" data-f="paidBefore" ${c.paidBefore ? "checked" : ""} /> 이 보장은 이미 받았어요 ${c.onceOnly ? "<b>(최초 1회만 주는 보장)</b>" : ""}</label>
       <input type="hidden" data-f="extra" value="${esc(JSON.stringify(c))}" />
       <button class="btn small danger" data-rm>이 줄 삭제</button>
     </div>`;
@@ -265,6 +274,7 @@ $("#covRows").addEventListener("click", (e) => { if (e.target.closest("[data-rm]
 function fillForm(p = {}, keepFiles = false) {
   editingId = p.id || null;
   editingDocs = { ...(p.docs || {}) };
+  editingExtra = { templateId: p.templateId, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units };
   if (!keepFiles) {
     pendingFiles = { 증권: null, 약관: null };
     $("#docPolicy").value = "";
@@ -285,6 +295,7 @@ function fillForm(p = {}, keepFiles = false) {
   $("#covRows").innerHTML = (p.coverages && p.coverages.length ? p.coverages : [{}]).map(covRowHTML).join("");
 }
 let editingDocs = {};
+let editingExtra = {};
 function showDocState() {
   for (const [k, el] of [["증권", "#docPolicyNow"], ["약관", "#docTermsNow"]]) {
     const f = pendingFiles[k];
@@ -309,6 +320,7 @@ function readForm() {
       waitingDays: Number(g("waitingDays")) || 0,
       reductionYears: Number(g("reductionYears")) || 0,
       source: g("source"),
+      paidBefore: row.querySelector('[data-f="paidBefore"]').checked,
     };
   }).filter((c) => c.name);
   return {
@@ -322,6 +334,7 @@ function readForm() {
     premium: Number($("#fPremium").value) || 0,
     startDate: $("#fStart").value,
     endDate: $("#fEnd").value,
+    ...Object.fromEntries(Object.entries(editingExtra).filter(([, v]) => v != null)),
     docs: { ...editingDocs },
     coverages,
   };
@@ -353,7 +366,7 @@ $("#aiRun").addEventListener("click", async () => {
   btn.disabled = true;
   try {
     const p = await askGemini({ apiKey: s.key, model: s.model, policyFile, termsFile, text, onStep: (m) => ($("#aiStatus").textContent = m) });
-    fillForm({ ...p, id: editingId, docs: editingDocs, owner: $("#fOwner").value }, true);
+    fillForm({ ...p, id: editingId, docs: editingDocs, owner: $("#fOwner").value, payDay: $("#fPayDay").value, phone: $("#fPhone").value }, true);
     const n = (p.coverages || []).length;
     $("#aiStatus").textContent = `✅ 다 읽었어요! 보장 ${n}개를 찾았어요.` + (termsFile ? "" : " (약관이 없어서 면책·감액 같은 조건은 비어 있을 수 있어요)") + " ② 에서 확인하고 저장하세요.";
   } catch (err) {
@@ -361,6 +374,26 @@ $("#aiRun").addEventListener("click", async () => {
   } finally {
     btn.disabled = false;
   }
+});
+
+// ---------- 디디가 정리한 약관 틀 ----------
+$("#tplSelect").innerHTML += POLICY_TEMPLATES.map((t) => `<option value="${esc(t.id)}">${esc(t.label)}</option>`).join("");
+$("#tplSelect").addEventListener("change", () => {
+  const t = POLICY_TEMPLATES.find((x) => x.id === $("#tplSelect").value);
+  $("#tplUnits").innerHTML = t ? `<div class="row2">${t.units.map((u) => `
+    <label>${esc(u.label)} <input type="number" min="0" step="any" data-unit="${esc(u.key)}" value="${u.default}" /><small class="hint">${esc(u.hint)}</small></label>`).join("")}</div>` : "";
+});
+$("#tplApply").addEventListener("click", () => {
+  const t = POLICY_TEMPLATES.find((x) => x.id === $("#tplSelect").value);
+  if (!t) return toast("목록에서 보험을 먼저 골라주세요");
+  const units = {};
+  document.querySelectorAll("[data-unit]").forEach((i) => (units[i.dataset.unit] = Number(i.value) || 0));
+  if (!units.main) return toast("주계약 구좌 수를 넣어주세요 (증권에 있어요)");
+  const built = buildFromTemplate(t, units);
+  fillForm({ ...built, id: editingId, docs: editingDocs, owner: $("#fOwner").value, payDay: $("#fPayDay").value, phone: $("#fPhone").value, premium: $("#fPremium").value, startDate: $("#fStart").value, endDate: $("#fEnd").value }, true);
+  $("#aiStatus").textContent = "";
+  toast(`보장 ${built.coverages.length}개를 채웠어요. ②에서 누구 보험인지·가입일을 넣고 저장하세요`);
+  $("#fOwner").scrollIntoView({ behavior: "smooth" });
 });
 
 // ---------- 5. 설정 ----------

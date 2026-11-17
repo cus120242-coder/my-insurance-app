@@ -39,7 +39,7 @@ function coverageMatchesCode(cov, code) {
 
 /**
  * 청구 가능 여부 계산
- * event = { code, date, diagnosis, surgery, hospitalDays, outpatientVisits, medicalCost }
+ * event = { code, date, diagnosis, surgery, surgeryClass, hospitalDays, outpatientVisits, medicalCost, preExisting }
  * 결과: 보장마다 { status: "가능" | "확인필요" | "불가", amount, reasons[] }
  */
 function checkClaim(policies, event) {
@@ -78,13 +78,25 @@ function checkClaim(policies, event) {
       // 3) 기본 금액 계산
       let amount = 0;
       const limit = Number(cov.amount) || 0;
-      if (cov.category === "진단" || cov.category === "수술") {
+      if (cov.category === "수술" && cov.amountsByClass) {
+        // 수술 종류(1~5종)에 따라 금액이 다른 보장
+        const table = Object.entries(cov.amountsByClass).map(([k, v]) => `${k}종 ${Number(v).toLocaleString()}원`).join(", ");
+        const cls = String(event.surgeryClass || "");
+        if (cls && cov.amountsByClass[cls] != null) {
+          amount = Number(cov.amountsByClass[cls]);
+          r.reasons.push(`${cls}종 수술 (${table})`);
+        } else {
+          amount = 0;
+          unknown(`수술 종류(1~5종)를 골라야 금액을 알 수 있어요: ${table}`);
+        }
+      } else if (cov.category === "진단" || cov.category === "수술") {
         amount = limit;
       } else if (cov.category === "입원") {
         const deduct = Number(cov.deductDays) || 0;
         const maxDays = Number(cov.maxDays) || Infinity;
         const paidDays = Math.min(Math.max(days - deduct, 0), maxDays);
         if (!cov.maxDays) unknown("최대 지급 일수가 등록 안 됐어요 (약관 확인)");
+        if (paidDays === 0 && deduct) { r.status = "불가"; r.reasons.push(`입원이 ${deduct}일을 넘어야 받을 수 있어요`); }
         amount = limit * paidDays;
         r.reasons.push(`${limit.toLocaleString()}원 × ${paidDays}일` + (deduct ? ` (처음 ${deduct}일은 빼고)` : ""));
       } else if (cov.category === "통원") {
@@ -136,16 +148,33 @@ function checkClaim(policies, event) {
         }
       }
 
+      // 7) 최초 1회만 주는 보장
+      if (cov.onceOnly) {
+        if (cov.paidBefore) { r.status = "불가"; r.reasons.push("최초 1회만 주는 보장인데, 이미 받은 적이 있어요"); }
+        else r.reasons.push("최초 1회만 주는 보장이에요 (전에 받은 적이 있으면 안 나와요)");
+      }
+
+      // 8) 가입 전부터 앓던 병
+      if (event.preExisting && r.status !== "불가" && cov.cause !== "상해" && !isInjuryCode(event.code)) {
+        if (p.preExistingRule) unknown(p.preExistingRule);
+        else unknown("가입 전부터 앓던 병이에요. 이 보험이 이런 경우를 보장하는지 약관을 확인해야 해요");
+      }
+
+      // 9) 특정 조건이 붙은 코드 (예: 남자아이만, 여자아이만)
+      for (const cond of cov.conditions || []) {
+        if (codeInAny(event.code, cond.codes)) unknown(cond.msg);
+      }
+
       if (cov.note) r.reasons.push("메모: " + cov.note);
       if (cov.source) r.reasons.push("📘 근거: " + cov.source);
       if (codesUnknown) { unknown("질병코드 범위가 등록 안 돼서 이 병이 해당되는지 몰라요 (약관 확인)"); amount = 0; }
-      if (!(p.docs && p.docs.약관)) r.reasons.push("약관 미등록 — 면책·감액 같은 조건을 확인 못 했어요");
+      if (!(p.docs && p.docs.약관) && !p.termsSource) r.reasons.push("약관 미등록 — 면책·감액 같은 조건을 확인 못 했어요");
       r.amount = r.status === "불가" ? 0 : Math.round(amount);
       results.push(r);
     }
   }
 
-  // 7) 실손보험이 여러 개면: 실제 낸 돈까지만 나눠서 받아요 (비례보상)
+  // 10) 실손보험이 여러 개면: 실제 낸 돈까지만 나눠서 받아요 (비례보상)
   const silson = results.filter((r) => r.coverage.category === "실손" && r.status !== "불가");
   if (silson.length > 1) {
     const sum = silson.reduce((s, r) => s + r.amount, 0);

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>내 보험 한눈에</title>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
   <!-- 잠금 화면 -->
@@ -70,6 +70,13 @@
           <label class="chk"><input type="checkbox" id="cDiag" checked /> 진단받았어요</label>
           <label class="chk"><input type="checkbox" id="cSurg" /> 수술했어요</label>
         </div>
+        <label>수술 종류 (보험사 수술분류표의 1~5종)
+          <select id="cSurgClass">
+            <option value="">모르겠어요</option>
+            <option value="1">1종</option><option value="2">2종</option><option value="3">3종</option><option value="4">4종</option><option value="5">5종</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="cPre" /> 보험 가입 전부터 이 병으로 진단·치료받은 적 있어요</label>
         <div class="row2">
           <label>입원 일수 <input id="cDays" type="number" min="0" value="0" /></label>
           <label>통원 횟수 <input id="cVisits" type="number" min="0" value="0" /></label>
@@ -89,6 +96,14 @@
 
     <!-- 4. 보험 추가 -->
     <section id="tab-add" class="tab">
+      <div class="panel tpl">
+        <h2>📚 디디가 약관을 읽어둔 보험이에요?</h2>
+        <p class="hint">목록에 있는 보험이면 AI 없이 바로 채워져요. 증권에서 <b>구좌 수</b>만 확인해서 넣어주세요.</p>
+        <select id="tplSelect"><option value="">— 목록에 없어요 (아래 ①로) —</option></select>
+        <div id="tplUnits"></div>
+        <button class="btn" id="tplApply">📚 이 약관으로 채우기</button>
+      </div>
+
       <div class="panel">
         <h2>① 증권과 약관 올리기</h2>
         <div class="docguide">
@@ -184,10 +199,11 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="kcd.js?v=5"></script>
-  <script src="engine.js?v=5"></script>
-  <script src="sample-data.js?v=5"></script>
-  <script src="gemini.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="kcd.js?v=7"></script>
+  <script src="engine.js?v=7"></script>
+  <script src="sample-data.js?v=7"></script>
+  <script src="gemini.js?v=7"></script>
+  <script src="templates.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

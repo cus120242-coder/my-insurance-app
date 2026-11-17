@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>내 보험 한눈에</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>🛡️ 내 보험 한눈에</h1>
+    <p class="sub">여기저기 가입한 보험, 한 곳에서 보고 청구까지 확인해요</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="home" class="active">📋 내 보험</button>
+    <button data-tab="add">📂 보험 등록</button>
+    <button data-tab="claim">💰 청구 확인</button>
+    <button data-tab="overlap">🔁 중복 체크</button>
+    <button data-tab="settings">⚙️ 설정</button>
+  </nav>
+
+  <main>
+    <!-- 1. 내 보험 -->
+    <section id="tab-home" class="tab active">
+      <div id="summary" class="cards3"></div>
+      <div id="policyList"></div>
+      <div id="emptyHome" class="empty hidden">
+        <h2>먼저 내 보험을 등록해요 📂</h2>
+        <ol class="steps">
+          <li><b>증권</b>과 <b>약관</b> 파일을 올려요 <small>(보험사 앱·홈페이지에서 PDF로 받을 수 있어요)</small></li>
+          <li>AI가 읽어서 칸을 채워줘요</li>
+          <li>눈으로 확인하고 <b>저장</b>하면 끝!</li>
+        </ol>
+        <button class="btn big" data-goto="add">➕ 첫 보험 등록하기</button>
+        <p class="hint">가입한 보험이 뭔지 모르겠다면? 신용정보원 "내보험다보여"에서 목록을 무료로 볼 수 있어요.</p>
+        <button class="btn ghost" id="loadSample">예시 보험으로 먼저 둘러보기</button>
+      </div>
+    </section>
+
+    <!-- 2. 청구 확인 -->
+    <section id="tab-claim" class="tab">
+      <div class="panel">
+        <h2>어떤 일이 있었나요?</h2>
+        <label>질병코드 (진단서에 적힌 코드)
+          <input id="cCode" placeholder="예: C50, I63, S82" autocomplete="off" />
+        </label>
+        <div id="cCodeName" class="hint"></div>
+        <label>진단받은 날
+          <input id="cDate" type="date" />
+        </label>
+        <div class="checks">
+          <label class="chk"><input type="checkbox" id="cDiag" checked /> 진단받았어요</label>
+          <label class="chk"><input type="checkbox" id="cSurg" /> 수술했어요</label>
+        </div>
+        <div class="row2">
+          <label>입원 일수 <input id="cDays" type="number" min="0" value="0" /></label>
+          <label>통원 횟수 <input id="cVisits" type="number" min="0" value="0" /></label>
+        </div>
+        <label>실제 낸 병원비 (원, 실손용)
+          <input id="cCost" type="number" min="0" value="0" />
+        </label>
+        <button class="btn big" id="runClaim">🔍 받을 수 있는 보험금 확인</button>
+      </div>
+      <div id="claimResult"></div>
+    </section>
+
+    <!-- 3. 중복 체크 -->
+    <section id="tab-overlap" class="tab">
+      <div id="overlapResult"></div>
+    </section>
+
+    <!-- 4. 보험 추가 -->
+    <section id="tab-add" class="tab">
+      <div class="panel">
+        <h2>① 증권과 약관 올리기</h2>
+        <div class="docguide">
+          <div><b>📄 보험증권</b><br />뭘, 얼마짜리로 가입했는지<br /><small>금액 · 가입일 · 만기일</small></div>
+          <div><b>📘 약관</b><br />언제 주고 언제 안 주는지<br /><small>질병코드 · 면책 · 감액</small></div>
+        </div>
+        <label>📄 보험증권 <b>(꼭 올려주세요)</b>
+          <input type="file" id="docPolicy" accept="application/pdf,image/*" />
+        </label>
+        <div id="docPolicyNow" class="hint"></div>
+        <label>📘 약관 <b>(있으면 훨씬 정확해요)</b>
+          <input type="file" id="docTerms" accept="application/pdf,image/*" />
+        </label>
+        <div id="docTermsNow" class="hint"></div>
+        <details>
+          <summary class="hint">파일이 없으면? 내용을 복사해서 붙여넣기</summary>
+          <textarea id="aiText" rows="3" placeholder="증권/약관 내용을 붙여넣으세요"></textarea>
+        </details>
+        <button class="btn big" id="aiRun">🤖 제미나이로 읽어서 자동 입력</button>
+        <div id="aiStatus" class="hint"></div>
+        <p class="hint">AI 없이 직접 써도 돼요 → 아래 ②에 바로 입력</p>
+      </div>
+
+      <div class="panel">
+        <h2>② 내용 확인하고 저장</h2>
+        <p class="hint">AI가 읽은 내용이 맞는지 <b>증권과 꼭 비교</b>해보세요. 틀린 칸은 고치면 돼요.</p>
+        <div class="row2">
+          <label>보험사 <input id="fCompany" /></label>
+          <label>상품 이름 <input id="fProduct" /></label>
+        </div>
+        <div class="row2">
+          <label>종류
+            <select id="fType"><option>정액</option><option>실손</option></select>
+          </label>
+          <label>월 보험료(원) <input id="fPremium" type="number" min="0" /></label>
+        </div>
+        <div class="row2">
+          <label>가입일 <input id="fStart" type="date" /></label>
+          <label>만기일 <input id="fEnd" type="date" /></label>
+        </div>
+
+        <h3>보장 내용</h3>
+        <div id="covRows"></div>
+        <button class="btn ghost" id="addCov">+ 보장 한 줄 추가</button>
+        <div class="actions">
+          <button class="btn big" id="savePolicy">💾 저장</button>
+          <button class="btn ghost" id="resetForm">비우기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 설정 -->
+    <section id="tab-settings" class="tab">
+      <div class="panel">
+        <h2>제미나이 AI 연결</h2>
+        <p class="hint">Google AI Studio에서 받은 API 키를 넣어요. 이 기기 안에만 저장돼요.</p>
+        <label>API 키 <input id="sKey" type="password" placeholder="AIza..." /></label>
+        <label>모델 이름 <input id="sModel" placeholder="gemini-2.5-flash" /></label>
+        <button class="btn" id="saveSettings">저장</button>
+      </div>
+      <div class="panel">
+        <h2>내 데이터</h2>
+        <p class="hint">보험 정보와 증권·약관 파일은 서버로 가지 않고 이 기기에만 저장돼요. (AI로 읽을 때만 제미나이에 보내요) 백업 파일에는 보장 내용만 들어가고, 증권·약관 원본 파일은 빠져요.</p>
+        <div class="actions">
+          <button class="btn ghost" id="exportData">📤 백업 파일 받기</button>
+          <label class="btn ghost filebtn">📥 백업 불러오기<input type="file" id="importData" accept=".json" hidden /></label>
+          <button class="btn danger" id="clearData">🗑️ 전부 지우기</button>
+        </div>
+      </div>
+      <p class="disclaimer">※ 이 앱의 금액은 "예상치"예요. 실제 지급 여부와 금액은 보험사 심사와 약관에 따라 달라질 수 있어요.</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="kcd.js"></script>
+  <script src="engine.js"></script>
+  <script src="sample-data.js"></script>
+  <script src="gemini.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

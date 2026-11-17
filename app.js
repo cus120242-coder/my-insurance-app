@@ -39,7 +39,10 @@ const save = () => store.set("policies", policies);
 
 // ---------- 가족 ----------
 const ownerOf = (p) => (p.owner || "").trim() || "나";
-const members = () => [...new Set(policies.map(ownerOf))];
+// 가족 명단 (보험이 없어도 카드로 보여줘요) + 보험에 적힌 사람
+let family = store.get("family", []);
+const saveFamily = () => store.set("family", family);
+const members = () => [...new Set([...family, ...policies.map(ownerOf)])];
 let currentMember = "전체";
 const visible = () => (currentMember === "전체" ? policies : policies.filter((p) => ownerOf(p) === currentMember));
 const monthly = (list) => list.reduce((s, p) => s + (Number(p.premium) || 0), 0);
@@ -70,20 +73,25 @@ function renderHome() {
   $("#emptyHome").classList.toggle("hidden", !empty);
   if (currentMember !== "전체" && !members().includes(currentMember)) currentMember = "전체";
   const fam = members();
-  if (fam.length < 2) currentMember = "전체";
-  $("#family").innerHTML = empty ? "" : fam.length < 2
-    ? `<p class="hint">👨‍👩‍👧 가족 보험도 등록하면(보험 등록 → "누구 보험이에요?") 사람별 카드가 생겨요.</p>`
-    : [["전체", policies], ...fam.map((m) => [m, policies.filter((p) => ownerOf(p) === m)])].map(([m, list]) => `
+  $("#family").innerHTML = fam.map((m) => {
+    const list = policies.filter((p) => ownerOf(p) === m);
+    return `
     <button class="fam ${m === currentMember ? "active" : ""}" data-member="${esc(m)}">
-      <div class="who">${m === "전체" ? "👨‍👩‍👧 가족 전체" : "👤 " + esc(m)}</div>
+      <div class="who">👤 ${esc(m)}</div>
       <div class="sm">보험 ${list.length}개</div>
       <div class="money">월 ${won(monthly(list))}</div>
-    </button>`).join("");
+    </button>`;
+  }).join("") + `<button class="fam add" data-addmember>＋<br />가족 추가</button>`;
+  $("#memberTools").innerHTML = currentMember === "전체" ? "" : `
+    <span>👤 <b>${esc(currentMember)}</b> 보험만 보는 중</span>
+    <button class="btn small ghost" data-allmembers>전체 보기</button>
+    <button class="btn small ghost" data-renamemember>이름 바꾸기</button>
+    <button class="btn small danger" data-removemember>명단에서 빼기</button>`;
 
   const list = visible();
   const covCount = list.reduce((s, p) => s + (p.coverages || []).length, 0);
   $("#summary").innerHTML = empty ? "" : `
-    <div class="stat"><div class="k">${currentMember === "전체" ? "가입한 보험" : esc(currentMember) + "의 보험"}</div><div class="v">${list.length}개</div></div>
+    <div class="stat"><div class="k">${currentMember === "전체" ? "가족 전체 보험" : esc(currentMember) + "의 보험"}</div><div class="v">${list.length}개</div></div>
     <div class="stat"><div class="k">보장 항목</div><div class="v">${covCount}개</div></div>
     <div class="stat"><div class="k">월 보험료 합계</div><div class="v">${won(monthly(list))}</div></div>`;
 
@@ -133,7 +141,29 @@ $("#policyList").addEventListener("click", (e) => {
 });
 $("#family").addEventListener("click", (e) => {
   const b = e.target.closest("[data-member]");
-  if (b) { currentMember = b.dataset.member; renderHome(); }
+  if (b) { currentMember = currentMember === b.dataset.member ? "전체" : b.dataset.member; renderHome(); }
+  if (e.target.closest("[data-addmember]")) {
+    const name = (prompt("가족 이름을 넣어주세요 (예: 엄마, 아빠, 큰딸, 작은딸)") || "").trim();
+    if (!name) return;
+    if (members().includes(name)) return toast("이미 있는 이름이에요. 딸이 둘이면 '큰딸', '작은딸'처럼 다르게 써주세요");
+    family.push(name); saveFamily(); renderHome(); toast(`${name}을(를) 추가했어요`);
+  }
+});
+$("#memberTools").addEventListener("click", (e) => {
+  const m = currentMember;
+  if (e.target.closest("[data-allmembers]")) { currentMember = "전체"; renderHome(); }
+  if (e.target.closest("[data-renamemember]")) {
+    const name = (prompt("새 이름", m) || "").trim();
+    if (!name || name === m) return;
+    if (members().includes(name)) return toast("이미 있는 이름이에요");
+    family = members().map((x) => (x === m ? name : x)); saveFamily();
+    policies.forEach((p) => { if (ownerOf(p) === m) p.owner = name; }); save();
+    currentMember = name; renderHome(); toast("이름을 바꿨어요");
+  }
+  if (e.target.closest("[data-removemember]")) {
+    if (policies.some((p) => ownerOf(p) === m)) return toast(`${m}의 보험이 있어서 뺄 수 없어요. 보험을 먼저 지우거나 다른 사람으로 옮겨주세요`);
+    family = family.filter((x) => x !== m); saveFamily(); currentMember = "전체"; renderHome(); toast("명단에서 뺐어요");
+  }
 });
 $("#loadSample").addEventListener("click", () => {
   policies = JSON.parse(JSON.stringify(SAMPLE_POLICIES));
@@ -308,6 +338,7 @@ $("#savePolicy").addEventListener("click", async () => {
   } catch { toast("파일 저장에 실패했어요 (저장 공간을 확인해주세요)"); }
   const i = policies.findIndex((x) => x.id === p.id);
   if (i >= 0) policies[i] = p; else policies.push(p);
+  if (!family.includes(p.owner)) { family = [...members().filter((x) => x !== p.owner), p.owner]; saveFamily(); }
   save(); fillForm(); toast("저장했어요!"); showTab("home");
 });
 $("#resetForm").addEventListener("click", () => fillForm());
@@ -361,7 +392,7 @@ $("#importData").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 $("#clearData").addEventListener("click", () => {
-  if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; save(); renderHome(); toast("전부 지웠어요"); }
+  if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; family = []; save(); saveFamily(); currentMember = "전체"; renderHome(); toast("전부 지웠어요"); }
 });
 
 // ---------- 잠금 (숫자 4자리) ----------

@@ -408,7 +408,9 @@ $("#saveSettings").addEventListener("click", () => {
   toast("설정을 저장했어요");
 });
 $("#exportData").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(policies, null, 2)], { type: "application/json" });
+  // 가족 명단도 같이 담아요 (예전 파일처럼 보험만 있는 배열도 불러올 수 있어요)
+  const data = { app: "내 보험 한눈에", version: 2, family: members(), policies };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "내보험-백업.json";
@@ -417,9 +419,14 @@ $("#exportData").addEventListener("click", () => {
 $("#importData").addEventListener("change", async (e) => {
   try {
     const data = JSON.parse(await e.target.files[0].text());
-    if (!Array.isArray(data)) throw new Error();
+    const list = Array.isArray(data) ? data : data && Array.isArray(data.policies) ? data.policies : null;
+    if (!list) throw new Error();
+    if (data.family && Array.isArray(data.family)) {
+      for (const m of data.family) if (m && !members().includes(m)) family.push(m);
+      saveFamily();
+    }
     let added = 0, updated = 0;
-    for (const p of data) {
+    for (const p of list) {
       const i = policies.findIndex((x) => x.id === p.id);
       if (i >= 0) { policies[i] = p; updated++; } else { policies.push(p); added++; }
     }

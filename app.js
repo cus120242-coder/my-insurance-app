@@ -70,7 +70,10 @@ function renderHome() {
   $("#emptyHome").classList.toggle("hidden", !empty);
   if (currentMember !== "전체" && !members().includes(currentMember)) currentMember = "전체";
   const fam = members();
-  $("#family").innerHTML = empty ? "" : [["전체", policies], ...fam.map((m) => [m, policies.filter((p) => ownerOf(p) === m)])].map(([m, list]) => `
+  if (fam.length < 2) currentMember = "전체";
+  $("#family").innerHTML = empty ? "" : fam.length < 2
+    ? `<p class="hint">👨‍👩‍👧 가족 보험도 등록하면(보험 등록 → "누구 보험이에요?") 사람별 카드가 생겨요.</p>`
+    : [["전체", policies], ...fam.map((m) => [m, policies.filter((p) => ownerOf(p) === m)])].map(([m, list]) => `
     <button class="fam ${m === currentMember ? "active" : ""}" data-member="${esc(m)}">
       <div class="who">${m === "전체" ? "👨‍👩‍👧 가족 전체" : "👤 " + esc(m)}</div>
       <div class="sm">보험 ${list.length}개</div>

@@ -28,6 +28,7 @@
 | `templates.js` | 디디가 약관을 읽고 만든 상품 틀 (구좌 수 곱하기) |
 | `gemini.js` | 제미나이로 증권/약관 읽기 (사용자 키는 기기에만 저장) |
 | `sample-data.js` | 가짜 예시 보험 |
+| (index.html `#tab-help`) | 📖 사용법 화면 |
 
 ## 데이터 형식
 - 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, phone, payNote, memo, termsSource, preExistingRule, units, docs, coverages[] }`
@@ -41,7 +42,6 @@
 - 확인 후 `main`에 push → GitHub Pages가 1~3분 뒤 반영.
 
 ## 다음에 할 일
-- (내일 첫 작업) 처음 쓰는 사람을 위한 "사용 안내" 화면 만들기: 3단계 안내(가족 추가 → 보험 등록 → 청구 확인), 제미나이 키 받는 법, "예상치" 안내
 - 다른 사람과 공유는 링크로만. 가족 보험 JSON 파일은 가족끼리만 (건강정보)
 - 사용자가 올려 줄 약관으로 "확인 필요" 상태인 보장들의 질병코드·조건 채우기 (약관마다 `templates.js` 틀 또는 불러오기 파일 갱신)
 - 아직 등록 안 한 가족 보험 등록 (증권 캡처 → 불러오기 파일)

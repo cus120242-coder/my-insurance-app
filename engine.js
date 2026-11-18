@@ -193,9 +193,12 @@ function checkClaim(policies, event) {
   }
 
   const total = results.reduce((s, r) => s + r.amount, 0);
+  // 확실한 금액(✅)과 조건을 더 봐야 하는 금액(⚠️)을 따로 보여줘요
+  const sure = results.filter((r) => r.status === "가능").reduce((s, r) => s + r.amount, 0);
+  const maybe = results.filter((r) => r.status === "확인필요").reduce((s, r) => s + r.amount, 0);
   const order = { 가능: 0, 확인필요: 1, 불가: 2 };
   results.sort((a, b) => order[a.status] - order[b.status] || b.amount - a.amount);
-  return { results, total };
+  return { results, total, sure, maybe };
 }
 
 // 서로 다른 보험에 같은 종류 보장이 겹치는지 찾기

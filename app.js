@@ -206,12 +206,13 @@ $("#runClaim").addEventListener("click", () => {
   if (!parseCode(event.code)) { toast("질병코드를 먼저 넣어주세요 (예: C50)"); return; }
   if (!policies.length) { toast("먼저 보험을 등록해주세요"); return; }
   const who = $("#cWho").value;
-  const { results, total } = checkClaim(policies.filter((p) => ownerOf(p) === who), event);
+  const { results, sure, maybe } = checkClaim(policies.filter((p) => ownerOf(p) === who), event);
   const label = { 가능: "✅ 청구 가능", 확인필요: "⚠️ 확인 필요", 불가: "❌ 해당 안 됨" };
   $("#claimResult").innerHTML = `
     <div class="total">
-      <div class="k">👤 ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — 예상 보험금 합계</div>
-      <div class="v">${won(total)}</div>
+      <div class="k">👤 ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — ✅ 확실한 예상 보험금</div>
+      <div class="v">${won(sure)}</div>
+      ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${won(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
     </div>
     ${results.length ? results.map((r) => `

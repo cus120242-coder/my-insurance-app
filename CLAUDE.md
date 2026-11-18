@@ -35,7 +35,7 @@
 - 보장: `{ name, category(진단|수술|입원|통원|실손|사망|기타), cause(질병|상해|모두), codes[], excludeCodes[], amount, amountsByClass{1..5}, waitingDays, reductionYears, reductionRate, deductDays, maxDays, icuOnly, silsonKind(입원|통원), selfPayRate, minDeduct, onceOnly, paidBefore, conditions[{codes,msg}], note, source }`
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).
   - `category: 사망/기타`는 보여주기만 하고 청구 계산에서는 빠진다.
-- 백업 파일: `{ app, version: 2, family[], policies[] }` (예전의 보험 배열만 있는 파일도 불러올 수 있음)
+- 백업 파일: `{ app, version: 2, family[], policies[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
 
 ## 테스트
 - 브라우저 확인은 Playwright로 `file:///.../index.html`을 열어서 한다 (이 작업 공간에서는 github.io 접속이 막혀 있음).

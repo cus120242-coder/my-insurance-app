@@ -432,7 +432,20 @@ $("#importData").addEventListener("change", async (e) => {
       const i = policies.findIndex((x) => x.id === p.id);
       if (i >= 0) { policies[i] = p; updated++; } else { policies.push(p); added++; }
     }
-    save(); toast(`새로 ${added}개, 바뀐 것 ${updated}개를 합쳤어요`); showTab("home");
+    // 증권·약관 원본 파일이 들어 있으면 이 기기 파일 창고에 넣어요
+    let fileCount = 0;
+    for (const [key, f] of Object.entries((data && data.files) || {})) {
+      const [pid, kind] = key.split(":");
+      const pol = policies.find((x) => x.id === pid);
+      if (!pol || !DOC_KINDS[kind] || !f || !f.data) continue;
+      const bin = atob(f.data);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      await fileDB.put(key, new File([bytes], f.name, { type: f.type || "application/pdf" }));
+      pol.docs = { ...(pol.docs || {}), [kind]: f.name };
+      fileCount++;
+    }
+    save(); toast(`새로 ${added}개, 바뀐 것 ${updated}개를 합쳤어요` + (fileCount ? ` · 원본 파일 ${fileCount}개 저장` : "")); showTab("home");
   } catch { toast("백업 파일이 아닌 것 같아요"); }
   e.target.value = "";
 });

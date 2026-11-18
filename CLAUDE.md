@@ -40,6 +40,8 @@
 - 백업 파일: `{ app, version: 2, family[], policies[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
 
 ## 테스트
+- 계산 엔진 자동 시험: `node tests/engine.test.js` (가짜 데이터만 사용). 엔진을 고치면 꼭 실행하고, 새 규칙을 넣으면 시험도 추가한다.
+- 보안: index.html에 CSP(보안 울타리)가 있다. 외부 주소를 새로 쓰면 `connect-src`에 추가해야 한다. 화면에 넣는 값은 항상 `esc()`로 감싼다. 원본 파일은 PDF·그림만 화면으로 연다.
 - 브라우저 확인은 Playwright로 `file:///.../index.html`을 열어서 한다 (이 작업 공간에서는 github.io 접속이 막혀 있음).
 - 확인 후 `main`에 push → GitHub Pages가 1~3분 뒤 반영.
 

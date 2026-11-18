@@ -126,7 +126,7 @@ function renderHome() {
         ${(p.coverages || []).map((c) => `
           <tr>
             <td>${esc(c.name)}${c.paidBefore ? ` <span class="tag miss">이미 받음</span>` : ""}<div class="codes">${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc(shortCodes(c.codes, c.cause))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}</div></td>
-            <td class="amt">${c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${k}종 ${won(v)}`).join("<br />") : won(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
+            <td class="amt">${c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${esc(k)}종 ${won(v)}`).join("<br />") : won(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
           </tr>`).join("")}
       </table>
     </article>`).join("");
@@ -138,7 +138,11 @@ $("#policyList").addEventListener("click", (e) => {
   if (view) {
     fileDB.get(`${view.dataset.view}:${view.dataset.kind}`).then((f) => {
       if (!f) return toast("파일을 찾을 수 없어요 (다른 기기에서 등록했나요?)");
-      window.open(URL.createObjectURL(f), "_blank");
+      // PDF·그림만 화면으로 열어요. 다른 종류(예: 웹페이지)는 앱 안에서 실행되지 않게 내려받기로만 처리해요
+      const safe = /^(application\/pdf|image\/(png|jpeg|webp|gif))$/.test(f.type);
+      const url = URL.createObjectURL(safe ? f : new Blob([f], { type: "application/octet-stream" }));
+      if (safe) window.open(url, "_blank");
+      else { const a = document.createElement("a"); a.href = url; a.download = f.name || "file"; a.click(); }
     });
   }
   if (del && confirm("이 보험을 지울까요?")) {
@@ -430,7 +434,12 @@ $("#importData").addEventListener("change", async (e) => {
     let added = 0, updated = 0;
     for (const p of list) {
       const i = policies.findIndex((x) => x.id === p.id);
-      if (i >= 0) { policies[i] = p; updated++; } else { policies.push(p); added++; }
+      if (i >= 0) {
+        // 누나가 앱에서 체크한 "이미 받았어요"는 다시 불러와도 지키기
+        const paid = new Set((policies[i].coverages || []).filter((c) => c.paidBefore).map((c) => c.name));
+        (p.coverages || []).forEach((c) => { if (paid.has(c.name)) c.paidBefore = true; });
+        policies[i] = p; updated++;
+      } else { policies.push(p); added++; }
     }
     // 증권·약관 원본 파일이 들어 있으면 이 기기 파일 창고에 넣어요
     let fileCount = 0;
@@ -441,7 +450,8 @@ $("#importData").addEventListener("change", async (e) => {
       const bin = atob(f.data);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      await fileDB.put(key, new File([bytes], f.name, { type: f.type || "application/pdf" }));
+      const okType = /^(application\/pdf|image\/(png|jpeg|webp|gif))$/.test(f.type || "") ? f.type : "application/octet-stream";
+      await fileDB.put(key, new File([bytes], String(f.name || kind), { type: okType }));
       pol.docs = { ...(pol.docs || {}), [kind]: f.name };
       fileCount++;
     }

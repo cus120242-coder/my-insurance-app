@@ -64,6 +64,9 @@ function checkClaim(policies, event) {
       if (cov.category === "입원" && days <= 0) continue;
       if (cov.category === "통원" && visits <= 0) continue;
       if (cov.category === "실손" && cost <= 0) continue;
+      // 실손 입원/통원 구분: 입원 실손은 입원했을 때만, 통원 실손은 입원 없이 병원 다녔을 때만
+      if (cov.silsonKind === "입원" && !(Number(event.hospitalDays) > 0)) continue;
+      if (cov.silsonKind === "통원" && (Number(event.hospitalDays) > 0 || visits <= 0)) continue;
       if (cov.category === "사망" || cov.category === "기타") continue;
 
       // 2) 보험 기간 확인
@@ -108,9 +111,11 @@ function checkClaim(policies, event) {
           unknown("본인부담률이 등록 안 돼서 금액을 계산할 수 없어요 (약관·증권 확인)");
           amount = 0;
         } else {
-          const minDeduct = Number(cov.minDeduct) || 0;
+          // 통원 실손은 병원 1번 갈 때마다 공제·한도가 따로 적용돼요
+          const times = cov.silsonKind === "통원" ? Math.max(visits, 1) : 1;
+          const minDeduct = (Number(cov.minDeduct) || 0) * times;
           const selfPay = Math.max(cost * Number(cov.selfPayRate), minDeduct);
-          amount = Math.min(Math.max(cost - selfPay, 0), limit || Infinity);
+          amount = Math.min(Math.max(cost - selfPay, 0), (limit || Infinity) * times);
           r.reasons.push(`병원비 ${won(cost)} 중 본인부담 ${won(selfPay)} 빼고`);
         }
       }

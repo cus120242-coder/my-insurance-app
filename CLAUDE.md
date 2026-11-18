@@ -32,7 +32,7 @@
 
 ## 데이터 형식
 - 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, phone, payNote, memo, termsSource, preExistingRule, units, docs, coverages[] }`
-- 보장: `{ name, category(진단|수술|입원|통원|실손|사망|기타), cause(질병|상해|모두), codes[], excludeCodes[], amount, amountsByClass{1..5}, waitingDays, reductionYears, reductionRate, deductDays, maxDays, icuOnly, onceOnly, paidBefore, conditions[{codes,msg}], note, source }`
+- 보장: `{ name, category(진단|수술|입원|통원|실손|사망|기타), cause(질병|상해|모두), codes[], excludeCodes[], amount, amountsByClass{1..5}, waitingDays, reductionYears, reductionRate, deductDays, maxDays, icuOnly, silsonKind(입원|통원), selfPayRate, minDeduct, onceOnly, paidBefore, conditions[{codes,msg}], note, source }`
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).
   - `category: 사망/기타`는 보여주기만 하고 청구 계산에서는 빠진다.
 - 백업 파일: `{ app, version: 2, family[], policies[] }` (예전의 보험 배열만 있는 파일도 불러올 수 있음)

@@ -28,7 +28,7 @@
 | `engine.js` | 청구 계산 (`checkClaim`), 중복 찾기 (`findOverlaps`) |
 | `kcd.js` | 질병코드 범위 비교 (소수점 코드 지원: D47.1, S02.5) |
 | `templates.js` | 디디가 약관을 읽고 만든 상품 틀 (구좌 수 곱하기) |
-| `gemini.js` | 제미나이로 증권/약관 읽기 (사용자 키는 기기에만 저장) |
+| `gemini.js` | 제미나이로 증권/약관 읽기 — **지금은 숨김** (index.html에서 불러오지 않음, CSP `connect-src 'none'`, 저장된 키는 시작할 때 삭제). 다시 켜려면 사용자 동의 후 `#aiBox`·설정 패널의 hidden, 스크립트 태그, CSP를 되돌린다 |
 | `sample-data.js` | 가짜 예시 보험 |
 | (index.html `#tab-help`) | 📖 사용법 화면 |
 
@@ -41,7 +41,7 @@
 
 ## 테스트
 - 계산 엔진 자동 시험: `node tests/engine.test.js` (가짜 데이터만 사용). 엔진을 고치면 꼭 실행하고, 새 규칙을 넣으면 시험도 추가한다.
-- 보안: index.html에 CSP(보안 울타리)가 있다. 외부 주소를 새로 쓰면 `connect-src`에 추가해야 한다. 화면에 넣는 값은 항상 `esc()`로 감싼다. 원본 파일은 PDF·그림만 화면으로 연다.
+- 보안: index.html에 CSP(보안 울타리)가 있다. 지금은 `connect-src 'none'`이라 앱이 외부로 아무것도 보내지 않는다. 화면에 넣는 값은 항상 `esc()`로 감싼다. 원본 파일은 PDF·그림만 화면으로 연다.
 - 브라우저 확인은 Playwright로 `file:///.../index.html`을 열어서 한다 (이 작업 공간에서는 github.io 접속이 막혀 있음).
 - 확인 후 `main`에 push → GitHub Pages가 1~3분 뒤 반영.
 

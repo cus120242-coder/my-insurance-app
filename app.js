@@ -406,6 +406,8 @@ $("#tplApply").addEventListener("click", () => {
 });
 
 // ---------- 5. 설정 ----------
+// 제미나이 기능을 숨겼으니, 예전에 저장한 키는 이 기기에서 지워요 (키 자체는 구글 AI 스튜디오에 그대로 있어요)
+{ const s0 = store.get("settings", {}); if (s0.key) { delete s0.key; store.set("settings", s0); } }
 const settings = store.get("settings", {});
 $("#sKey").value = settings.key || "";
 $("#sModel").value = settings.model || "";

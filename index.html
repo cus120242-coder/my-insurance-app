@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <title>내 보험 한눈에</title>
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="stylesheet" href="styles.css?v=18" />
 </head>
 <body>
   <!-- 잠금 화면 -->
@@ -122,6 +122,9 @@
           <input type="file" id="docTerms" accept="application/pdf,image/*" />
         </label>
         <div id="docTermsNow" class="hint"></div>
+        <p class="hint">📎 올린 파일은 <b>이 기기 안에만</b> 보관돼요. 보험 카드에서 "증권 보기·약관 보기"로 열 수 있어요.<br />보장 내용은 아래 ②에 증권을 보고 입력하거나, 디디에게 받은 파일을 ⚙️ 설정 → <b>백업 불러오기</b>로 넣으세요.</p>
+        <!-- 제미나이 자동 읽기: 보안을 위해 숨김 (필요하면 hidden을 빼고 gemini.js와 CSP connect-src를 되돌리기) -->
+        <div id="aiBox" class="hidden">
         <details>
           <summary class="hint">파일이 없으면? 내용을 복사해서 붙여넣기</summary>
           <textarea id="aiText" rows="3" placeholder="증권/약관 내용을 붙여넣으세요"></textarea>
@@ -129,11 +132,12 @@
         <button class="btn big" id="aiRun">🤖 제미나이로 읽어서 자동 입력</button>
         <div id="aiStatus" class="hint"></div>
         <p class="hint">AI 없이 직접 써도 돼요 → 아래 ②에 바로 입력</p>
+        </div>
       </div>
 
       <div class="panel">
         <h2>② 내용 확인하고 저장</h2>
-        <p class="hint">AI가 읽은 내용이 맞는지 <b>증권과 꼭 비교</b>해보세요. 틀린 칸은 고치면 돼요.</p>
+        <p class="hint">입력한 내용이 맞는지 <b>증권과 꼭 비교</b>해보세요.</p>
         <label>👤 누구 보험이에요? (보장받는 사람)
           <input id="fOwner" list="ownerList" placeholder="예: 나, 엄마, 첫째" />
           <datalist id="ownerList"></datalist>
@@ -173,12 +177,12 @@
         <h2>📖 이렇게 써요 (3단계)</h2>
         <ol class="steps">
           <li><b>👨‍👩‍👧 가족 추가</b><br />📋 내 보험 → <b>＋ 가족 추가</b> → 이름 쓰기 (예: 엄마, 큰딸)<br /><small>같은 이름은 못 써요. 딸이 둘이면 "큰딸·작은딸"처럼</small></li>
-          <li><b>📂 보험 등록</b><br />📂 보험 등록 → <b>누구 보험인지</b> 쓰고 → 증권·약관을 올려 🤖 AI로 읽거나 직접 입력 → <b>💾 저장</b><br /><small>목록에 있는 보험이면 "📚 이 약관으로 채우기"로 더 쉽게</small></li>
+          <li><b>📂 보험 등록</b><br />📂 보험 등록 → <b>누구 보험인지</b> 쓰고 → 증권을 보고 입력 → <b>💾 저장</b><br /><small>디디에게 받은 파일이 있으면 ⚙️ 설정 → 백업 불러오기가 더 쉬워요</small><br /><small>목록에 있는 보험이면 "📚 이 약관으로 채우기"로 더 쉽게</small></li>
           <li><b>💰 청구 확인</b><br />💰 청구 확인 → <b>누가 아팠는지</b> 고르고 → 진단서의 <b>질병코드</b>(예: C50, J18) → 입원·수술·병원비 넣기 → <b>🔍 확인</b></li>
         </ol>
       </div>
 
-      <div class="panel">
+      <div class="panel hidden">
         <h2>🔑 AI(제미나이) 키 받는 법</h2>
         <p class="hint">증권·약관을 AI가 자동으로 읽게 하려면 필요해요. 없어도 직접 입력하면 돼요.</p>
         <ol class="steps">
@@ -203,7 +207,7 @@
         <h2>🔒 내 정보는 어디에?</h2>
         <ul>
           <li>보험·가족·파일은 <b>이 기기 안에만</b> 저장돼요. 다른 사람이 같은 링크를 열어도 안 보여요.</li>
-          <li>AI로 읽을 때만 그 파일이 구글(제미나이)로 보내져요. 이름·주민번호는 가리고 올리면 더 안전해요.</li>
+          <li>이 앱은 <b>인터넷으로 아무것도 보내지 않아요.</b> (보안 울타리로 막아뒀어요)</li>
           <li>다른 기기로 옮기려면 ⚙️ 설정 → <b>백업 파일 받기</b> → 새 기기에서 <b>백업 불러오기</b>.</li>
           <li>회사 등 함께 쓰는 컴퓨터라면 다 쓴 뒤 ⚙️ 설정 → <b>전부 지우기</b> 또는 🔒 잠금을 켜세요.</li>
         </ul>
@@ -213,7 +217,7 @@
     </section>
 
     <section id="tab-settings" class="tab">
-      <div class="panel">
+      <div class="panel hidden">
         <h2>제미나이 AI 연결</h2>
         <p class="hint">Google AI Studio에서 받은 API 키를 넣어요. 이 기기 안에만 저장돼요.</p>
         <label>API 키 <input id="sKey" type="password" placeholder="AIza..." /></label>
@@ -234,7 +238,7 @@
       <div class="panel">
         <h2>내 데이터 · 가족과 나누기</h2>
         <p class="hint">👨‍👩‍👧 가족 공유: "백업 파일 받기"로 만든 파일을 카톡 등으로 보내고, 받은 사람이 "백업 불러오기"를 누르면 돼요. 이미 있는 보험은 그대로 두고 합쳐져요.</p>
-        <p class="hint">보험 정보와 증권·약관 파일은 서버로 가지 않고 이 기기에만 저장돼요. (AI로 읽을 때만 제미나이에 보내요) 백업 파일에는 보장 내용만 들어가고, 증권·약관 원본 파일은 빠져요.</p>
+        <p class="hint">보험 정보와 증권·약관 파일은 서버로 가지 않고 이 기기에만 저장돼요. 백업 파일에는 보장 내용만 들어가고, 증권·약관 원본 파일은 빠져요.</p>
         <div class="actions">
           <button class="btn ghost" id="exportData">📤 백업 파일 받기</button>
           <label class="btn ghost filebtn">📥 백업 불러오기<input type="file" id="importData" accept=".json" hidden /></label>
@@ -247,11 +251,10 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="kcd.js?v=17"></script>
-  <script src="engine.js?v=17"></script>
-  <script src="sample-data.js?v=17"></script>
-  <script src="gemini.js?v=17"></script>
-  <script src="templates.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="kcd.js?v=18"></script>
+  <script src="engine.js?v=18"></script>
+  <script src="sample-data.js?v=18"></script>
+  <script src="templates.js?v=18"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

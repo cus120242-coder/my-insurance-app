@@ -68,9 +68,9 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) showTab(g.dataset.goto); });
 
 // ---------- 1. 내 보험 ----------
-function shortCodes(codes) {
+function shortCodes(codes, cause) {
   if (!codes || !codes.length) return "코드 미등록";
-  if (codes.includes("*")) return "모든 질병/상해";
+  if (codes.includes("*")) return cause === "상해" ? "모든 상해" : cause === "질병" ? "모든 질병" : "모든 질병/상해";
   return codes.length > 4 ? codes.slice(0, 4).join(", ") + ` 외 ${codes.length - 4}개` : codes.join(", ");
 }
 function renderHome() {
@@ -124,7 +124,7 @@ function renderHome() {
       <table class="covs">
         ${(p.coverages || []).map((c) => `
           <tr>
-            <td>${esc(c.name)}${c.paidBefore ? ` <span class="tag miss">이미 받음</span>` : ""}<div class="codes">${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc(shortCodes(c.codes))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}</div></td>
+            <td>${esc(c.name)}${c.paidBefore ? ` <span class="tag miss">이미 받음</span>` : ""}<div class="codes">${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc(shortCodes(c.codes, c.cause))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}</div></td>
             <td class="amt">${c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${k}종 ${won(v)}`).join("<br />") : won(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
           </tr>`).join("")}
       </table>

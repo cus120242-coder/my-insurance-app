@@ -112,7 +112,8 @@ function renderHome() {
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
           <div class="doclinks">${Object.keys(DOC_KINDS).map((k) => p.docs && p.docs[k]
             ? `<button class="tag have" data-view="${esc(p.id)}" data-kind="${k}">✅ ${k} 보기</button>`
-            : k === "약관" && p.termsSource ? `<span class="tag have">📘 약관 정리본</span>`
+            : k === "약관" && p.termsSource ? `<span class="tag have">📘 약관 반영됨</span>`
+            : k === "증권" && p.policySource ? `<span class="tag have">📄 증권 반영됨</span>`
             : `<span class="tag miss">⚠️ ${k} 없음</span>`).join("")}</div>
           ${p.termsSource ? `<div class="meta">📘 약관 규칙: 디디가 정리한 「${esc(p.termsSource)}」${p.units ? ` · 주계약 ${esc(p.units.main)}구좌` : ""}</div>` : !(p.docs && p.docs.약관) ? `<div class="meta">약관이 없어서 질병코드·면책·감액 조건을 확인 못 했어요</div>` : ""}
         </div>
@@ -278,7 +279,7 @@ $("#covRows").addEventListener("click", (e) => { if (e.target.closest("[data-rm]
 function fillForm(p = {}, keepFiles = false) {
   editingId = p.id || null;
   editingDocs = { ...(p.docs || {}) };
-  editingExtra = { templateId: p.templateId, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote };
+  editingExtra = { templateId: p.templateId, policySource: p.policySource, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote };
   if (!keepFiles) {
     pendingFiles = { 증권: null, 약관: null };
     $("#docPolicy").value = "";

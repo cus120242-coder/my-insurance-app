@@ -134,3 +134,5 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .tag.fire { background: #fff0e6; color: #c45a12; }
 .tag.silbi { background: var(--ok-soft); color: var(--ok); }
 @media (prefers-color-scheme: dark) { .tag.life { background: #26294a; color: #a9adff; } .tag.fire { background: #3a2616; color: #ffb27a; } }
+.covs td.amt.txt { white-space: normal; width: 40%; font-size: 13px; word-break: keep-all; }
+.covs { table-layout: auto; }

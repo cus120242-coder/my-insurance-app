@@ -126,3 +126,11 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .membertools:empty { display: none; }
 .panel.tpl { border: 2px solid var(--brand); }
 .memo { font-size: 13px; margin-top: 6px; } .memo summary { cursor: pointer; color: var(--brand); } .memo ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.kind { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 14px; cursor: pointer; font-family: inherit; }
+.kind.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.kinds:empty { display: none; }
+.tag.life { background: #eef0ff; color: #4a4fc4; }
+.tag.fire { background: #fff0e6; color: #c45a12; }
+.tag.silbi { background: var(--ok-soft); color: var(--ok); }
+@media (prefers-color-scheme: dark) { .tag.life { background: #26294a; color: #a9adff; } .tag.fire { background: #3a2616; color: #ffb27a; } }

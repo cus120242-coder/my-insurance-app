@@ -45,6 +45,12 @@ const saveFamily = () => store.set("family", family);
 const members = () => [...new Set([...family, ...policies.map(ownerOf)])];
 let currentMember = "전체";
 const visible = () => (currentMember === "전체" ? policies : policies.filter((p) => ownerOf(p) === currentMember));
+// 보험 종류 나누기: 보험사 이름으로 생명/손해, 실손 보장이 있으면 실비
+const insurerKind = (p) => /생명|라이프/.test(p.company || "") ? "생명" : /화재|손해|손보|해상/.test(p.company || "") ? "손해" : "";
+const hasSilbi = (p) => (p.coverages || []).some((c) => c.category === "실손");
+const KIND_FILTERS = { 전체: () => true, 생명: (p) => insurerKind(p) === "생명", 손해: (p) => insurerKind(p) === "손해", 실비: hasSilbi };
+const KIND_LABEL = { 전체: "전체", 생명: "🏛️ 생명보험", 손해: "🔥 손해보험(화재)", 실비: "🏥 실비" };
+let currentKind = "전체";
 const monthly = (list) => list.reduce((s, p) => s + (Number(p.premium) || 0), 0);
 
 function toast(msg) {
@@ -93,7 +99,12 @@ function renderHome() {
     <button class="btn small ghost" data-renamemember>이름 바꾸기</button>
     <button class="btn small danger" data-removemember>명단에서 빼기</button>`;
 
-  const list = visible();
+  const byMember = visible();
+  $("#kindFilter").innerHTML = empty ? "" : Object.keys(KIND_FILTERS).map((k) => {
+    const n = byMember.filter(KIND_FILTERS[k]).length;
+    return `<button class="kind ${k === currentKind ? "active" : ""}" data-kind-filter="${k}">${KIND_LABEL[k]} <b>${n}</b></button>`;
+  }).join("");
+  const list = byMember.filter(KIND_FILTERS[currentKind]);
   const covCount = list.reduce((s, p) => s + (p.coverages || []).length, 0);
   $("#summary").innerHTML = empty ? "" : `
     <div class="stat"><div class="k">${currentMember === "전체" ? "가족 전체 보험" : esc(currentMember) + "의 보험"}</div><div class="v">${list.length}개</div></div>
@@ -106,7 +117,7 @@ function renderHome() {
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">👤 ${esc(ownerOf(p))}</span><span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          <div><span class="tag owner">👤 ${esc(ownerOf(p))}</span>${insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -151,6 +162,10 @@ $("#policyList").addEventListener("click", (e) => {
     save(); renderHome(); toast("지웠어요");
   }
   if (edit) { fillForm(policies.find((p) => p.id === edit.dataset.edit)); showTab("add"); }
+});
+$("#kindFilter").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-kind-filter]");
+  if (b) { currentKind = b.dataset.kindFilter; renderHome(); }
 });
 $("#family").addEventListener("click", (e) => {
   const b = e.target.closest("[data-member]");

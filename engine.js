@@ -101,6 +101,8 @@ function checkClaim(policies, event) {
         const paidDays = Math.min(Math.max(days - deduct, 0), maxDays);
         if (!cov.maxDays) unknown("최대 지급 일수가 등록 안 됐어요 (약관 확인)");
         if (paidDays === 0 && deduct) { r.status = "불가"; r.reasons.push(`입원이 ${deduct}일을 넘어야 받을 수 있어요`); }
+        // 며칠 이상 입원해야 첫날부터 주는 보장 (예: 4일 이상 입원하면 첫날부터)
+        if (cov.minDays && days < Number(cov.minDays)) { amount = 0; r.status = "불가"; r.reasons.push(`${cov.minDays}일 이상 입원해야 받을 수 있어요`); }
         amount = limit * paidDays;
         r.reasons.push(`${limit.toLocaleString()}원 × ${paidDays}일` + (deduct ? ` (처음 ${deduct}일은 빼고)` : ""));
       } else if (cov.category === "통원") {

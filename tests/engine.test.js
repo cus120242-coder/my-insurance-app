@@ -35,6 +35,12 @@ t("입원일당: 3일 넘긴 날부터, 최대 일수", () => {
   assert.equal(checkClaim([pol([c])], { code: "J18", date: "2021-01-01", hospitalDays: 3 }).results[0].status, "불가");
 });
 
+t("N일 이상 입원해야 첫날부터 지급 (minDays)", () => {
+  const c = { name: "9대입원", category: "입원", cause: "질병", codes: ["*"], amount: 10, minDays: 4, maxDays: 123 };
+  assert.equal(checkClaim([pol([c])], { code: "I63", date: "2021-01-01", hospitalDays: 7 }).results[0].amount, 70);
+  assert.equal(checkClaim([pol([c])], { code: "I63", date: "2021-01-01", hospitalDays: 3 }).results[0].status, "불가");
+});
+
 t("중환자실 입원비는 중환자실 날짜만", () => {
   const c = { name: "ICU", category: "입원", cause: "모두", codes: ["*"], amount: 10, icuOnly: true, maxDays: 10 };
   assert.equal(checkClaim([pol([c])], { code: "J18", date: "2021-01-01", hospitalDays: 20, icuDays: 12 }).results[0].amount, 100);

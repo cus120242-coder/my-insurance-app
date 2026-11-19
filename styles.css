@@ -136,3 +136,9 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 @media (prefers-color-scheme: dark) { .tag.life { background: #26294a; color: #a9adff; } .tag.fire { background: #3a2616; color: #ffb27a; } }
 .covs td.amt.txt { white-space: normal; width: 40%; font-size: 13px; word-break: keep-all; }
 .covs { table-layout: auto; }
+/* 보험 개수·보험료는 빨간색으로 잘 보이게 */
+:root { --hot: #e02424; }
+@media (prefers-color-scheme: dark) { :root { --hot: #ff6b6b; } }
+.fam .sm, .fam .money, .stat .v, .tag.money { color: var(--hot); font-weight: 800; }
+.tag.money { background: #fdeaea; }
+@media (prefers-color-scheme: dark) { .tag.money { background: #3a1818; } }

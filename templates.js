@@ -90,6 +90,57 @@ const POLICY_TEMPLATES = [
       { unit: "congenital", name: "[선천이상특약] 선천이상수술급여금", category: "수술", cause: "질병", codes: SH_KIDS_CODES.congenital, amount: 1000000, source: "선천이상특약 제11조, 부표1·부표4 (p.48~49, 52~53)" },
     ],
   },
+  {
+    id: "shinhan-kids-plus-2007",
+    label: "신한생명 · 무배당 신한아이사랑보험Plus (2007년 약관)",
+    company: "신한생명",
+    product: "무배당 신한아이사랑보험Plus",
+    type: "정액",
+    termsSource: "신한아이사랑보험Plus 약관 (2007)",
+    units: [
+      { key: "main", label: "주계약 구좌 수", hint: "증권의 주계약 가입금액/구좌", default: 1 },
+      { key: "outpatient", label: "통원약관 가입금액 (만원, 없으면 0)", hint: "약관 기준 1,000만원", default: 0, perUnit: 1000 },
+      { key: "congenital", label: "선천이상특약 가입금액 (만원, 없으면 0)", hint: "약관 기준 200만원", default: 0, perUnit: 200 },
+    ],
+    coverages: (() => {
+      const P = {
+        leuk: ["C90-C95"],
+        cancer: ["C00-C14", "C15-C26", "C30-C39", "C40-C41", "C43", "C45-C49", "C50", "C51-C58", "C60-C63", "C64-C68", "C69-C72", "C73-C75", "C76-C80", "C81-C96", "C97"],
+        small: ["C44", "D00-D07", "D09", "D37-D48"],
+        kidHigh: ["C91-C95", "C90", "C81-C85", "C40-C41", "C70-C72", "D32-D33"],
+        burn: ["T20-T32"],
+        env: ["L20", "J30", "J45", "J46", "J20", "J21", "J12-J18", "J60-J70", "N14", "R78", "A96", "A98", "A99"],
+        sight: ["H00-H06", "H10-H13", "H15-H22", "H25-H28", "H30-H36", "H40-H42", "H43-H45", "H46-H48", "H49-H52", "H53-H54", "H55-H59", "H60-H62", "H65-H75", "H80-H83", "H90-H95"],
+        all: ["A00-Y98"], allEx: ["F00-F99", "Q00-Q99"],
+        congenital: ["Q00-Q07", "Q10-Q18", "Q20-Q28", "Q30-Q45", "Q50-Q56", "Q60-Q99"],
+      };
+      const src = (s) => "Plus 주계약 제29조, 부표1 (약관 p.10)" + (s ? ", " + s : "");
+      return [
+        { unit: "main", name: "백혈병·골수암 진단급여금", category: "진단", cause: "질병", codes: P.leuk, amount: 100000000, reductionYears: 1, reductionRate: 0.5, onceOnly: true, note: "다른 암을 먼저 받았으면 차액만 더 줘요", source: src("부표5 (p.19)") },
+        { unit: "main", name: "백혈병·골수암 이외의 암 진단급여금", category: "진단", cause: "질병", codes: P.cancer, excludeCodes: [...P.leuk, "C44"], amount: 50000000, reductionYears: 1, reductionRate: 0.5, onceOnly: true, source: src("부표6 (p.19)") },
+        { unit: "main", name: "기타피부암·상피내암·경계성종양 진단급여금", category: "진단", cause: "질병", codes: P.small, amount: 3000000, onceOnly: true, note: "각각 최초 1회", source: src("부표7·8 (p.20)") },
+        { unit: "main", name: "수술급여금", category: "수술", cause: "모두", codes: P.all, excludeCodes: P.allEx, amountsByClass: { 1: 100000, 2: 300000, 3: 500000, 4: 1000000, 5: 3000000 }, note: "수술 종류(1~5종)는 약관 수술분류표로 정해요", source: src("부표16 (p.22)") },
+        { unit: "main", name: "특정질병수술급여금 (어린이 고액치료비관련 질병)", category: "수술", cause: "질병", codes: P.kidHigh, amount: 2000000, note: "수술급여금에 더해서 줘요", source: src("부표12 (p.21)") },
+        { unit: "main", name: "특정질병수술급여금 (화상)", category: "수술", cause: "모두", codes: P.burn, amount: 500000, note: "수술급여금에 더해서 줘요", source: src("부표13 (p.22)") },
+        { unit: "main", name: "입원급여금", category: "입원", cause: "모두", codes: P.all, excludeCodes: P.allEx, amount: 30000, deductDays: 3, maxDays: 120, note: "4일 이상 입원 시 3일 넘긴 날부터", source: src("부표16 (p.22)") },
+        { unit: "main", name: "특정질병입원급여금 (어린이 고액치료비관련 질병)", category: "입원", cause: "질병", codes: P.kidHigh, amount: 70000, deductDays: 3, maxDays: 120, note: "입원급여금에 더해서 줘요", source: src("부표12 (p.21)") },
+        { unit: "main", name: "특정질병입원급여금 (화상)", category: "입원", cause: "모두", codes: P.burn, amount: 70000, deductDays: 3, maxDays: 120, note: "입원급여금에 더해서 줘요", source: src("부표13 (p.22)") },
+        { unit: "main", name: "특정질병입원급여금 (환경성질환)", category: "입원", cause: "질병", codes: P.env, amount: 20000, deductDays: 3, maxDays: 120, note: "아토피·알레르기 비염·천식·폐렴 등. 입원급여금에 더해서 줘요", source: src("부표14 (p.22)") },
+        { unit: "main", name: "특정질병입원급여금 (시청각질환)", category: "입원", cause: "질병", codes: P.sight, amount: 20000, deductDays: 3, maxDays: 120, note: "입원급여금에 더해서 줘요", source: src("부표15 (p.22)") },
+        { unit: "main", name: "재해골절치료자금", category: "진단", cause: "상해", codes: ["S02", "S12", "S22", "S32", "S42", "S52", "S62", "S72", "S82", "S92", "T02", "T08", "T10", "T12", "T14.2"], excludeCodes: ["S02.5"], amount: 300000, note: "골절 1회당. 한 사고로 여러 곳이 부러져도 1회. 치아 깨진 건(S02.5) 제외", source: src("제28조, 부표20 골절 분류표 (p.25)") },
+        { unit: "main", name: "조혈모세포이식수술급여금 (최초 1회)", category: "기타", cause: "모두", codes: ["*"], amount: 20000000, onceOnly: true, source: src() },
+        { unit: "main", name: "법정전염병진단급여금 (진단 1회당)", category: "기타", cause: "질병", codes: ["*"], amount: 500000, source: src("부표9 (p.21)") },
+        { unit: "main", name: "유괴·납치위로금 (최초 1회)", category: "기타", cause: "모두", codes: ["*"], amount: 5000000, source: src() },
+        { unit: "main", name: "스쿨존교통사고치료자금 (12세까지, 사고 1회당)", category: "기타", cause: "상해", codes: ["*"], amount: 300000, source: src() },
+        { unit: "main", name: "교통재해장해급여금 (× 장해지급률)", category: "기타", cause: "상해", codes: ["*"], amount: 100000000, source: src() },
+        { unit: "main", name: "일반재해장해급여금 (× 장해지급률)", category: "기타", cause: "상해", codes: ["*"], amount: 50000000, source: src() },
+        { unit: "outpatient", name: "[통원약관] 통원치료비 (어린이 고액치료비관련 질병)", category: "통원", cause: "질병", codes: P.kidHigh, amount: 30000, source: "Plus 통원약관 부표1 (약관 p.42)" },
+        { unit: "outpatient", name: "[통원약관] 통원치료비 (환경성질환·시청각질환)", category: "통원", cause: "질병", codes: [...P.env, ...P.sight], amount: 10000, source: "Plus 통원약관 부표1 (약관 p.42)" },
+        { unit: "congenital", name: "[선천이상특약] 선천이상입원급여금", category: "입원", cause: "질병", codes: P.congenital, amount: 20000, deductDays: 3, maxDays: 120, source: "新선천이상보장특약 부표1·4 (약관 p.46~47)" },
+        { unit: "congenital", name: "[선천이상특약] 선천이상수술급여금", category: "수술", cause: "질병", codes: P.congenital, amount: 1000000, source: "新선천이상보장특약 부표1·4 (약관 p.46~47)" },
+      ];
+    })(),
+  },
 ];
 
 // 구좌 수를 곱해서 실제 금액으로 바꾼 보장 목록 만들기

@@ -26,6 +26,7 @@
 | 파일 | 하는 일 |
 |---|---|
 | `index.html`, `styles.css` | 화면. 파일을 고치면 `?v=숫자`를 올려서 브라우저 캐시를 피한다 (`sw.js`의 `CACHE`·파일 목록 숫자도 같이 올린다) |
+| `theme.js` | 화면 색. 기본 밝게, ⚙️ 설정의 🌙 밤 모드 스위치로 어둡게 (`localStorage.theme`, `<html data-theme>`). CSS의 밤 색은 `:root[data-theme="dark"]` |
 | `sw.js` | 인터넷 없이도 열리게 앱 파일만 보관 (보험 정보는 안 다룸). http로 열 때만 등록 |
 | `privacy.html` | 개인정보 처리방침 (플레이스토어 필수). 앱이 하는 일이 바뀌면 같이 고친다 |
 | `app.js` | 버튼 동작, 가족 카드, 잠금, 백업/불러오기 (기기 안 localStorage + IndexedDB) |

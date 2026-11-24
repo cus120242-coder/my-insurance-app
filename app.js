@@ -524,3 +524,10 @@ renderHome();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
+
+// 🌙 밤 모드 (설정에서 켜고 끄기)
+$("#darkMode").checked = document.documentElement.dataset.theme === "dark";
+$("#darkMode").addEventListener("change", (e) => {
+  try { localStorage.setItem("theme", e.target.checked ? "dark" : "light"); } catch {}
+  applyTheme(e.target.checked);
+});

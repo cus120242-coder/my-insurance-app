@@ -3,12 +3,8 @@
   --brand: #2f6bff; --brand-soft: #e8efff;
   --ok: #12a150; --ok-soft: #e4f6ec; --warn: #d98a00; --warn-soft: #fff4dc; --no: #d64545; --no-soft: #fde8e8;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #12151c; --card: #1c212b; --text: #e8ebf2; --muted: #9aa3b5; --line: #2c3341;
-    --brand: #6b95ff; --brand-soft: #1f2a45;
-    --ok-soft: #133022; --warn-soft: #362a10; --no-soft: #3a1818;
-  }
+:root[data-theme="dark"] {
+  --ok-soft: #133022; --warn-soft: #362a10; --no-soft: #3a1818;
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; }
@@ -133,29 +129,28 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .tag.life { background: #eef0ff; color: #4a4fc4; }
 .tag.fire { background: #fff0e6; color: #c45a12; }
 .tag.silbi { background: var(--ok-soft); color: var(--ok); }
-@media (prefers-color-scheme: dark) { .tag.life { background: #26294a; color: #a9adff; } .tag.fire { background: #3a2616; color: #ffb27a; } }
+:root[data-theme="dark"] .tag.life { background: #26294a; color: #a9adff; } :root[data-theme="dark"] .tag.fire { background: #3a2616; color: #ffb27a; }
 .covs td.amt.txt { white-space: normal; width: 40%; font-size: 13px; word-break: keep-all; }
 .covs { table-layout: auto; }
 /* 보험 개수·보험료는 빨간색으로 잘 보이게 */
 :root { --hot: #e02424; }
-@media (prefers-color-scheme: dark) { :root { --hot: #ff6b6b; } }
+:root[data-theme="dark"] { --hot: #ff6b6b; }
 .fam .sm, .fam .money, .stat .v, .tag.money { color: var(--hot); font-weight: 800; }
 .tag.money { background: #fdeaea; }
-@media (prefers-color-scheme: dark) { .tag.money { background: #3a1818; } }
+:root[data-theme="dark"] .tag.money { background: #3a1818; }
 
 /* ================= 2026 새 디자인 (위 규칙을 덮어써요) ================= */
 :root {
   --bg: #f2f4f8; --card: #ffffff; --text: #191f28; --muted: #6b7684; --line: #eceff3;
   --brand: #3b5bff; --brand-2: #7a5cff; --brand-soft: #eef1ff;
   --field: #f2f4f6; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 20px rgba(16,24,40,.06);
-  --radius: 20px; --nav-h: 64px; color-scheme: light dark;
+  --radius: 20px; --nav-h: 64px; color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1115; --card: #1a1d24; --text: #eef0f4; --muted: #98a0ad; --line: #272b34;
-    --brand: #7b91ff; --brand-2: #a08bff; --brand-soft: #21263a; --field: #22262e;
-    --shadow: 0 1px 2px rgba(0,0,0,.3);
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1115; --card: #1a1d24; --text: #eef0f4; --muted: #98a0ad; --line: #272b34;
+  --brand: #7b91ff; --brand-2: #a08bff; --brand-soft: #21263a; --field: #22262e;
+  --shadow: 0 1px 2px rgba(0,0,0,.3);
 }
 body { font-family: "Pretendard", -apple-system, "SF Pro Text", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); }
@@ -249,3 +244,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .disclaimer { line-height: 1.6; padding: 0 4px; }
 .disclaimer a { color: var(--muted); }
 .lockicon { width: 80px; height: 80px; margin: 0 auto 8px; display: grid; place-items: center; border-radius: 24px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); font-size: 40px; }
+
+/* 밤 모드 켜기 버튼 */
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); font-size: 16px; font-weight: 600; margin: 0; cursor: pointer; }
+.switch input { appearance: none; -webkit-appearance: none; width: 52px; height: 32px; margin: 0; padding: 0; border: 0; border-radius: 999px; background: #d0d5dd; position: relative; flex: 0 0 auto; cursor: pointer; transition: background .2s; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.switch input:checked { background: var(--brand); }
+.switch input:checked::after { transform: translateX(20px); }

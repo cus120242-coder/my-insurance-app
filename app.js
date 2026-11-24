@@ -519,3 +519,8 @@ showPinState();
 
 fillForm();
 renderHome();
+
+// 인터넷이 없어도 열리게 (웹 주소로 열었을 때만)
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}

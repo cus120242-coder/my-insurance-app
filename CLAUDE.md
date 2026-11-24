@@ -27,6 +27,7 @@
 |---|---|
 | `index.html`, `styles.css` | 화면. 파일을 고치면 `?v=숫자`를 올려서 브라우저 캐시를 피한다 (`sw.js`의 `CACHE`·파일 목록 숫자도 같이 올린다) |
 | `theme.js` | 화면 색. 기본 밝게, ⚙️ 설정의 🌙 밤 모드 스위치로 어둡게 (`localStorage.theme`, `<html data-theme>`). CSS의 밤 색은 `:root[data-theme="dark"]` |
+| `avatars.js` | 가족 캐릭터 그림 14개 (디디가 그린 SVG). 저장값은 id(mom, dad, house, car…), 예전 이모지도 읽음 |
 | `sw.js` | 인터넷 없이도 열리게 앱 파일만 보관 (보험 정보는 안 다룸). http로 열 때만 등록 |
 | `privacy.html` | 개인정보 처리방침 (플레이스토어 필수). 앱이 하는 일이 바뀌면 같이 고친다 |
 | `app.js` | 버튼 동작, 가족 카드, 잠금, 백업/불러오기 (기기 안 localStorage + IndexedDB) |
@@ -43,7 +44,7 @@
   - 자동차보험은 보험 `type: "자동차"`, 집(주택화재)보험은 `type: "주택"`, 보장은 모두 `category: "기타"`(보여주기만)
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).
   - `category: 사망/기타`는 보여주기만 하고 청구 계산에서는 빠진다.
-- 백업 파일: `{ app, version: 2, family[], avatars?{이름: 이모지}, policies[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
+- 백업 파일: `{ app, version: 2, family[], avatars?{이름: 캐릭터id}, policies[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
 
 ## 테스트
 - 계산 엔진 자동 시험: `node tests/engine.test.js` (가짜 데이터만 사용). 엔진을 고치면 꼭 실행하고, 새 규칙을 넣으면 시험도 추가한다.

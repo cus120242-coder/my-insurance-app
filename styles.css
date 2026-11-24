@@ -252,10 +252,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .switch input:checked { background: var(--brand); }
 .switch input:checked::after { transform: translateX(20px); }
 
-/* 가족 캐릭터 */
-.fam .face { width: 48px; height: 48px; display: grid; place-items: center; font-size: 30px; line-height: 1; border-radius: 16px; background: var(--brand-soft); margin-bottom: 8px; }
-.fam.active .face { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
-.facepicker { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; margin-top: 8px; padding: 10px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); }
-.facepicker button { height: 44px; font-size: 24px; border: 0; border-radius: 12px; background: var(--field); cursor: pointer; }
-.facepicker button.active { outline: 2px solid var(--brand); background: var(--brand-soft); }
-.facepicker button.auto { grid-column: span 2; font-size: 13px; font-weight: 700; color: var(--brand); font-family: inherit; }
+/* 가족 캐릭터 (avatars.js 그림) */
+.av { display: inline-block; vertical-align: middle; line-height: 0; }
+.av svg { width: 100%; height: 100%; display: block; }
+.av-sm { width: 22px; height: 22px; margin: -3px 2px 0 0; }
+.av-lg { width: 60px; height: 60px; }
+.fam .face { margin-bottom: 8px; filter: drop-shadow(0 3px 6px rgba(16,24,40,.12)); }
+.fam.active .face .av-lg { transform: scale(1.06); }
+.fam .face .av-lg { transition: transform .15s; }
+.tag.owner { display: inline-flex; align-items: center; gap: 2px; padding-left: 4px; }
+.tag.owner .av-sm { width: 18px; height: 18px; margin: 0; }
+.person .av-sm, .total .av-sm { width: 26px; height: 26px; }
+.facepicker { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; margin-top: 8px; padding: 12px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); }
+.facepicker button { aspect-ratio: 1; padding: 4px; border: 0; border-radius: 16px; background: var(--field); cursor: pointer; line-height: 0; }
+.facepicker button svg { width: 100%; height: 100%; }
+.facepicker button.active { outline: 3px solid var(--brand); background: var(--brand-soft); }
+.facepicker button.auto { aspect-ratio: auto; grid-column: span 2; font-size: 13px; font-weight: 700; color: var(--brand); font-family: inherit; line-height: 1.2; }

@@ -73,7 +73,11 @@ const isThing = (p) => isCar(p) || isHouse(p); // 사람이 아닌 차·집 보�
 const KIND_FILTERS = { 전체: () => true, 생명: (p) => insurerKind(p) === "생명", 손해: (p) => insurerKind(p) === "손해" && !isThing(p), 실비: hasSilbi, 자동차: isCar, 집: isHouse };
 const KIND_LABEL = { 전체: "전체", 생명: "🏛️ 생명보험", 손해: "🔥 손해보험(화재)", 실비: "🏥 실비", 자동차: "🚗 자동차", 집: "🏠 집" };
 let currentKind = "전체";
-const monthly = (list) => list.reduce((s, p) => s + (Number(p.premium) || 0), 0);
+// 보험료 다 낸 보험: payEnd("YYYY-MM", 마지막으로 내는 달)가 지나면 저절로 "납입 완료"로 바뀌고 합계에서 빠져요
+const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+const paidOff = (p) => /^\d{4}-\d{2}$/.test(p.payEnd || "") && thisMonth() > p.payEnd;
+const payEndText = (p) => { const [y, m] = String(p.payEnd).split("-"); return `${y}년 ${Number(m)}월`; };
+const monthly = (list) => list.reduce((s, p) => s + (paidOff(p) ? 0 : Number(p.premium) || 0), 0);
 
 function toast(msg) {
   const t = $("#toast");
@@ -141,7 +145,7 @@ function renderHome() {
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -333,7 +337,7 @@ $("#covRows").addEventListener("click", (e) => { if (e.target.closest("[data-rm]
 function fillForm(p = {}, keepFiles = false) {
   editingId = p.id || null;
   editingDocs = { ...(p.docs || {}) };
-  editingExtra = { templateId: p.templateId, policySource: p.policySource, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote };
+  editingExtra = { templateId: p.templateId, policySource: p.policySource, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote, payEnd: p.payEnd };
   if (!keepFiles) {
     pendingFiles = { 증권: null, 약관: null };
     $("#docPolicy").value = "";

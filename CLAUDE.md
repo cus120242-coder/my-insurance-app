@@ -39,7 +39,7 @@
 | (index.html `#tab-help`) | 📖 사용법 화면 |
 
 ## 데이터 형식
-- 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, phone, payNote, memo, policySource(증권 내용 반영 표시), termsSource, preExistingRule, units, docs, coverages[] }`
+- 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, payEnd("YYYY-MM" 마지막 납입 달, 지나면 저절로 납입 완료·합계 제외), phone, payNote, memo, policySource(증권 내용 반영 표시), termsSource, preExistingRule, units, docs, coverages[] }`
 - 보장: `{ name, category(진단|수술|입원|통원|실손|사망|기타), cause(질병|상해|모두), codes[], excludeCodes[], amount, amountsByClass{1..5}, waitingDays, reductionYears, reductionRate, deductDays, minDays(N일 이상 입원해야 첫날부터), maxDays, icuOnly, silsonKind(입원|통원), selfPayRate, minDeduct, onceOnly, paidBefore, conditions[{codes,msg}], note, source, amountText(숫자가 아닌 금액 표시, 예: "무한") }`
   - 자동차보험은 보험 `type: "자동차"`, 집(주택화재)보험은 `type: "주택"`, 보장은 모두 `category: "기타"`(보여주기만)
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).

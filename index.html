@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <meta name="theme-color" content="#2f6bff" />
   <meta name="apple-mobile-web-app-title" content="내 보험" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=28" />
 </head>
 <body>
   <!-- 잠금 화면 -->
@@ -26,17 +26,17 @@
   </div>
 
   <header class="top">
-    <h1>🛡️ 내 보험 한눈에</h1>
+    <h1><span class="logo">🛡️</span> 내 보험 한눈에</h1>
     <p class="sub">여기저기 가입한 보험, 한 곳에서 보고 청구까지 확인해요</p>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button data-tab="home" class="active">📋 내 보험</button>
-    <button data-tab="add">📂 보험 등록</button>
-    <button data-tab="claim">💰 청구 확인</button>
-    <button data-tab="overlap">🔁 중복 체크</button>
-    <button data-tab="settings">⚙️ 설정</button>
-    <button data-tab="help">📖 사용법</button>
+    <button data-tab="home" class="active"><span class="ic">📋</span>내 보험</button>
+    <button data-tab="add"><span class="ic">📂</span>등록</button>
+    <button data-tab="claim"><span class="ic">💰</span>청구 확인</button>
+    <button data-tab="overlap"><span class="ic">🔁</span>중복 체크</button>
+    <button data-tab="settings"><span class="ic">⚙️</span>설정</button>
+    <button data-tab="help"><span class="ic">📖</span>사용법</button>
   </nav>
 
   <main>
@@ -51,7 +51,7 @@
         <h2>먼저 내 보험을 등록해요 📂</h2>
         <ol class="steps">
           <li><b>증권</b>과 <b>약관</b> 파일을 올려요 <small>(보험사 앱·홈페이지에서 PDF로 받을 수 있어요)</small></li>
-          <li>AI가 읽어서 칸을 채워줘요</li>
+          <li>증권을 보고 보장 내용을 입력해요 <small>(백업 파일이 있으면 ⚙️ 설정 → 백업 불러오기)</small></li>
           <li>눈으로 확인하고 <b>저장</b>하면 끝!</li>
         </ol>
         <button class="btn big" data-goto="add">➕ 첫 보험 등록하기</button>
@@ -128,7 +128,7 @@
           <input type="file" id="docTerms" accept="application/pdf,image/*" />
         </label>
         <div id="docTermsNow" class="hint"></div>
-        <p class="hint">📎 올린 파일은 <b>이 기기 안에만</b> 보관돼요. 보험 카드에서 "증권 보기·약관 보기"로 열 수 있어요.<br />보장 내용은 아래 ②에 증권을 보고 입력하거나, 디디에게 받은 파일을 ⚙️ 설정 → <b>백업 불러오기</b>로 넣으세요.</p>
+        <p class="hint">📎 올린 파일은 <b>이 기기 안에만</b> 보관돼요. 보험 카드에서 "증권 보기·약관 보기"로 열 수 있어요.<br />보장 내용은 아래 ②에 증권을 보고 입력하거나, 받은 백업 파일을 ⚙️ 설정 → <b>백업 불러오기</b>로 넣으세요.</p>
         <!-- 제미나이 자동 읽기: 보안을 위해 숨김 (필요하면 hidden을 빼고 gemini.js와 CSP connect-src를 되돌리기) -->
         <div id="aiBox" class="hidden">
         <details>
@@ -258,10 +258,10 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="kcd.js?v=27"></script>
-  <script src="engine.js?v=27"></script>
-  <script src="sample-data.js?v=27"></script>
-  <script src="templates.js?v=27"></script>
-  <script src="app.js?v=27"></script>
+  <script src="kcd.js?v=28"></script>
+  <script src="engine.js?v=28"></script>
+  <script src="sample-data.js?v=28"></script>
+  <script src="templates.js?v=28"></script>
+  <script src="app.js?v=28"></script>
 </body>
 </html>

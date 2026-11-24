@@ -148,7 +148,7 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
   --bg: #f2f4f8; --card: #ffffff; --text: #191f28; --muted: #6b7684; --line: #eceff3;
   --brand: #3b5bff; --brand-2: #7a5cff; --brand-soft: #eef1ff;
   --field: #f2f4f6; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 20px rgba(16,24,40,.06);
-  --radius: 20px; --nav-h: 64px;
+  --radius: 20px; --nav-h: 64px; color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {

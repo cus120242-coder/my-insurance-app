@@ -1,7 +1,7 @@
 // 인터넷이 없어도 앱이 열리게 해 주는 도우미 (서비스 워커)
 // 앱 파일만 기기에 보관해요. 보험 정보는 여기서 다루지 않고, 밖으로 보내지도 않아요.
 // 앱 파일을 고치면 아래 숫자(v)를 index.html의 ?v= 숫자와 같이 올려요.
-const CACHE = "app-v30";
+const CACHE = "app-v31";
 const FILES = [
   "./", "./index.html", "./theme.js?v=30", "./privacy.html", "./styles.css?v=30",
   "./kcd.js?v=30", "./engine.js?v=30", "./sample-data.js?v=30", "./templates.js?v=30", "./app.js?v=30",
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" }) // 브라우저에 남은 옛 파일 말고 늘 새 파일 확인
       .then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;

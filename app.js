@@ -44,6 +44,22 @@ let family = store.get("family", []);
 const saveFamily = () => store.set("family", family);
 const members = () => [...new Set([...family, ...policies.map(ownerOf)])];
 let currentMember = "전체";
+
+// ---------- 캐릭터 ----------
+// 이름과 보험 종류로 저절로 골라요 (집 보험만 있으면 🏠, 자동차 보험만 있으면 🚗). 직접 바꿀 수도 있어요
+let avatars = store.get("avatars", {});
+const saveAvatars = () => store.set("avatars", avatars);
+const AVATAR_CHOICES = ["👩", "👨", "👵", "👴", "👧", "👦", "👶", "🧑", "🙂", "😎", "🐶", "🐱", "🐰", "🐻", "🏠", "🏡", "🚗", "🚙", "🛵", "🐾"];
+function avatarOf(m) {
+  if (avatars[m]) return avatars[m];
+  const list = policies.filter((p) => ownerOf(p) === m);
+  if (/집|주택|아파트|빌라/.test(m) || (list.length && list.every((p) => p.type === "주택"))) return "🏠";
+  if (/자동차|차$|^차/.test(m) || (list.length && list.every((p) => p.type === "자동차"))) return "🚗";
+  const rules = [[/할머니/, "👵"], [/할아버지/, "👴"], [/엄마|어머니|아내|와이프/, "👩"], [/아빠|아버지|남편/, "👨"],
+    [/딸|언니|누나|여동생/, "👧"], [/아들|오빠|형|남동생/, "👦"], [/아기|아가|막내/, "👶"], [/^나$|^내$|^본인$/, "🙂"]];
+  for (const [re, face] of rules) if (re.test(m)) return face;
+  return "🧑";
+}
 const visible = () => (currentMember === "전체" ? policies : policies.filter((p) => ownerOf(p) === currentMember));
 // 보험 종류 나누기: 보험사 이름으로 생명/손해, 실손 보장이 있으면 실비
 const insurerKind = (p) => /생명|라이프/.test(p.company || "") ? "생명" : /화재|손해|손보|해상/.test(p.company || "") ? "손해" : "";
@@ -91,14 +107,16 @@ function renderHome() {
     const list = policies.filter((p) => ownerOf(p) === m);
     return `
     <button class="fam ${m === currentMember ? "active" : ""}" data-member="${esc(m)}">
-      <div class="who">👤 ${esc(m)}</div>
+      <div class="face">${avatarOf(m)}</div>
+      <div class="who">${esc(m)}</div>
       <div class="sm">보험 ${list.length}개</div>
       <div class="money">월 ${won(monthly(list))}</div>
     </button>`;
   }).join("") + `<button class="fam add" data-addmember>＋<br />가족 추가</button>`;
   $("#memberTools").innerHTML = currentMember === "전체" ? "" : `
-    <span>👤 <b>${esc(currentMember)}</b> 보험만 보는 중</span>
+    <span>${avatarOf(currentMember)} <b>${esc(currentMember)}</b> 보험만 보는 중</span>
     <button class="btn small ghost" data-allmembers>전체 보기</button>
+    <button class="btn small ghost" data-pickface>캐릭터 바꾸기</button>
     <button class="btn small ghost" data-renamemember>이름 바꾸기</button>
     <button class="btn small danger" data-removemember>명단에서 빼기</button>`;
 
@@ -120,7 +138,7 @@ function renderHome() {
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">👤 ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          <div><span class="tag owner">${avatarOf(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -183,11 +201,22 @@ $("#family").addEventListener("click", (e) => {
 $("#memberTools").addEventListener("click", (e) => {
   const m = currentMember;
   if (e.target.closest("[data-allmembers]")) { currentMember = "전체"; renderHome(); }
+  if (e.target.closest("[data-pickface]")) {
+    const old = $("#facePicker");
+    if (old) return old.remove();
+    $("#memberTools").insertAdjacentHTML("beforeend", `<div id="facePicker" class="facepicker">${AVATAR_CHOICES.map((f) => `<button data-face="${f}" class="${avatarOf(m) === f ? "active" : ""}">${f}</button>`).join("")}<button data-face="" class="auto">처음대로</button></div>`);
+  }
+  const f = e.target.closest("[data-face]");
+  if (f) {
+    if (f.dataset.face) avatars[m] = f.dataset.face; else delete avatars[m];
+    saveAvatars(); renderHome(); toast("캐릭터를 바꿨어요");
+  }
   if (e.target.closest("[data-renamemember]")) {
     const name = (prompt("새 이름", m) || "").trim();
     if (!name || name === m) return;
     if (members().includes(name)) return toast("이미 있는 이름이에요");
     family = members().map((x) => (x === m ? name : x)); saveFamily();
+    if (avatars[m]) { avatars[name] = avatars[m]; delete avatars[m]; saveAvatars(); }
     policies.forEach((p) => { if (ownerOf(p) === m) p.owner = name; }); save();
     currentMember = name; renderHome(); toast("이름을 바꿨어요");
   }
@@ -233,7 +262,7 @@ $("#runClaim").addEventListener("click", () => {
   const label = { 가능: "✅ 청구 가능", 확인필요: "⚠️ 확인 필요", 불가: "❌ 해당 안 됨" };
   $("#claimResult").innerHTML = `
     <div class="total">
-      <div class="k">👤 ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — ✅ 확실한 예상 보험금</div>
+      <div class="k">${avatarOf(who)} ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — ✅ 확실한 예상 보험금</div>
       <div class="v">${won(sure)}</div>
       ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${won(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
@@ -257,7 +286,7 @@ function renderOverlap() {
   if (!policies.length) { $("#overlapResult").innerHTML = `<div class="empty">먼저 보험을 등록해주세요.</div>`; return; }
   $("#overlapResult").innerHTML = `<p class="hint">겹치는 보장은 <b>같은 사람</b>의 보험끼리만 비교해요.</p>` + members().map((m) => {
     const list = findOverlaps(policies.filter((p) => ownerOf(p) === m));
-    return `<h3 class="person">👤 ${esc(m)}</h3>` + (list.length ? overlapHTML(list) : `<div class="box info">👍 겹치는 보장이 없어요</div>`);
+    return `<h3 class="person">${avatarOf(m)} ${esc(m)}</h3>` + (list.length ? overlapHTML(list) : `<div class="box info">👍 겹치는 보장이 없어요</div>`);
   }).join("");
 }
 function overlapHTML(list) {
@@ -435,7 +464,7 @@ $("#saveSettings").addEventListener("click", () => {
 });
 $("#exportData").addEventListener("click", () => {
   // 가족 명단도 같이 담아요 (예전 파일처럼 보험만 있는 배열도 불러올 수 있어요)
-  const data = { app: "내 보험 한눈에", version: 2, family: members(), policies };
+  const data = { app: "내 보험 한눈에", version: 2, family: members(), avatars, policies };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -450,6 +479,10 @@ $("#importData").addEventListener("change", async (e) => {
     if (data.family && Array.isArray(data.family)) {
       for (const m of data.family) if (m && !members().includes(m)) family.push(m);
       saveFamily();
+    }
+    if (data.avatars && typeof data.avatars === "object") {
+      for (const [k, v] of Object.entries(data.avatars)) if (!avatars[k] && AVATAR_CHOICES.includes(v)) avatars[k] = v;
+      saveAvatars();
     }
     let added = 0, updated = 0;
     for (const p of list) {

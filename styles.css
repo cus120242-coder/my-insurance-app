@@ -251,3 +251,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
 .switch input:checked { background: var(--brand); }
 .switch input:checked::after { transform: translateX(20px); }
+
+/* 가족 캐릭터 */
+.fam .face { width: 48px; height: 48px; display: grid; place-items: center; font-size: 30px; line-height: 1; border-radius: 16px; background: var(--brand-soft); margin-bottom: 8px; }
+.fam.active .face { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
+.facepicker { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; margin-top: 8px; padding: 10px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); }
+.facepicker button { height: 44px; font-size: 24px; border: 0; border-radius: 12px; background: var(--field); cursor: pointer; }
+.facepicker button.active { outline: 2px solid var(--brand); background: var(--brand-soft); }
+.facepicker button.auto { grid-column: span 2; font-size: 13px; font-weight: 700; color: var(--brand); font-family: inherit; }

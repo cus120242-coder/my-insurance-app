@@ -268,3 +268,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .facepicker button svg { width: 100%; height: 100%; }
 .facepicker button.active { outline: 3px solid var(--brand); background: var(--brand-soft); }
 .facepicker button.auto { aspect-ratio: auto; grid-column: span 2; font-size: 13px; font-weight: 700; color: var(--brand); font-family: inherit; line-height: 1.2; }
+
+/* 컴퓨터처럼 넓은 화면: 가족 카드를 옆으로 밀지 않고 여러 줄로 보여줘요 */
+@media (min-width: 600px) {
+  .family { flex-wrap: wrap; overflow-x: visible; }
+}

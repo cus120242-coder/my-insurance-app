@@ -306,7 +306,18 @@ function addYearsStr(dateStr, n) {
 }
 const todayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-// 다음 갱신일: 가입일부터 renewYears(갱신 주기)마다. 만기가 지나면 없음
+// 만기일이 곧 갱신일인 보험 (예: 10년 만기·10년마다 자동갱신) → 만기에 끝나지 않고 갱신돼요
+function renewsAtEnd(p) {
+  const n = Number(p.renewYears);
+  if (!n || !p.startDate || !p.endDate) return false;
+  for (let k = 1; k < 200; k++) {
+    const d = addYearsStr(p.startDate, n * k);
+    if (d === p.endDate) return true;
+    if (!d || d > p.endDate) return false;
+  }
+  return false;
+}
+// 다음 갱신일: 가입일부터 renewYears(갱신 주기)마다. 만기가 지나면 없음 (만기일이 갱신일이면 그날도 갱신)
 function nextRenewal(p, today = new Date()) {
   const n = Number(p.renewYears);
   if (!n || !p.startDate) return "";
@@ -314,7 +325,7 @@ function nextRenewal(p, today = new Date()) {
   for (let k = 1; k < 200; k++) {
     const d = addYearsStr(p.startDate, n * k);
     if (!d) return "";
-    if (p.endDate && d >= p.endDate) return "";
+    if (p.endDate && (d > p.endDate || (d === p.endDate && !renewsAtEnd(p)))) return "";
     if (d >= t) return d;
   }
   return "";
@@ -322,24 +333,26 @@ function nextRenewal(p, today = new Date()) {
 
 // 가족 한 사람의 큰 보장이 있는지 (있다/없다/모름만, 금액 추천은 안 해요). 만기 지난 보험과 차·집 보험은 빼요
 const GAP_CHECKS = [
-  { key: "암", label: "🎗️ 암 진단", category: "진단", code: "C16" },
-  { key: "뇌", label: "🧠 뇌졸중 진단", category: "진단", code: "I63", partialCode: "I61", partialMsg: "뇌출혈만 (뇌경색은 안 됨)" },
-  { key: "심장", label: "❤️ 심근경색 진단", category: "진단", code: "I21" },
+  { key: "암", label: "🎗️ 암 진단", category: "진단", code: "C16", hint: /암|종양/ },
+  { key: "뇌", label: "🧠 뇌졸중 진단", category: "진단", code: "I63", partialCode: "I61", partialMsg: "뇌출혈만 (뇌경색은 안 됨)", hint: /뇌|졸중|중풍/ },
+  { key: "심장", label: "❤️ 심근경색 진단", category: "진단", code: "I21", hint: /심장|심근|허혈/ },
   { key: "실비", label: "🏥 실비", category: "실손" },
   { key: "수술", label: "🔪 수술비", category: "수술" },
   { key: "입원", label: "🛏️ 입원비", category: "입원" },
 ];
 function coverageGaps(policies, today = new Date()) {
   const t = todayStr(today);
-  const active = policies.filter((p) => p.type !== "자동차" && p.type !== "주택" && !(p.endDate && p.endDate < t));
+  const active = policies.filter((p) => p.type !== "자동차" && p.type !== "주택" && !(p.endDate && p.endDate < t && !renewsAtEnd(p)));
   return GAP_CHECKS.map((g) => {
-    const covs = active.flatMap((p) => (p.coverages || []).filter((c) => c.category === g.category && !c.paidBefore));
+    // 보험료 납입면제는 돈이 나오는 보장이 아니라서 빼요
+    const covs = active.flatMap((p) => (p.coverages || []).filter((c) => c.category === g.category && !c.paidBefore && !/납입면제/.test(c.name || "")));
     if (!g.code) return { ...g, status: covs.length ? "있음" : "없음", amount: 0, count: covs.length };
     const known = covs.filter((c) => c.codes && c.codes.length);
     const hit = known.filter((c) => coverageMatchesCode(c, g.code));
     if (hit.length) return { ...g, status: "있음", amount: hit.reduce((s, c) => s + (Number(c.amount) || 0), 0), count: hit.length };
     if (g.partialCode && known.some((c) => coverageMatchesCode(c, g.partialCode))) return { ...g, status: "일부", amount: 0, count: 0, msg: g.partialMsg };
-    if (covs.length > known.length) return { ...g, status: "모름", amount: 0, count: 0, msg: "질병코드 미등록 보장이 있어요" };
+    // 코드가 없는 보장은 이름이 비슷할 때만 "모름" (예: 뇌 칸에는 이름에 뇌·졸중이 들어간 것만)
+    if (covs.some((c) => !(c.codes && c.codes.length) && (!g.hint || g.hint.test(c.name || "")))) return { ...g, status: "모름", amount: 0, count: 0, msg: "질병코드 미등록 보장이 있어요" };
     return { ...g, status: "없음", amount: 0, count: 0 };
   });
 }
@@ -350,4 +363,4 @@ function receivedTotal(claims, year) {
     t + (x.received && (!year || String(x.receivedDate || c.date || "").startsWith(String(year))) ? Number(x.received) || 0 : 0), 0), 0);
 }
 
-if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, coverageGaps, receivedTotal, coverageMatchesCode, CATEGORY_LABEL, won };
+if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, renewsAtEnd, coverageGaps, receivedTotal, coverageMatchesCode, CATEGORY_LABEL, won };

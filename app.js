@@ -146,7 +146,7 @@ function renderHome() {
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}${nextRenewal(p) ? `<span class="tag">🔄 ${esc(p.renewYears)}년 갱신 · 다음 ${esc(nextRenewal(p))}</span>` : ""}${p.endDate && p.endDate < todayStr() ? `<span class="tag miss">⛔ 만기 끝남</span>` : ""}</div>
+          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}${nextRenewal(p) ? `<span class="tag">🔄 ${esc(p.renewYears)}년 갱신 · 다음 ${esc(nextRenewal(p))}</span>` : ""}${p.endDate && p.endDate < todayStr() && !renewsAtEnd(p) ? `<span class="tag miss">⛔ 만기 끝남</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -331,7 +331,7 @@ function renderClaimAlert() {
   for (const p of policies) {
     const r = nextRenewal(p), rn = r ? daysLeft(r) : 999;
     if (rn <= 60) items.push({ urgent: rn <= 14, html: `🔄 <b>${esc(ownerOf(p))} · ${esc(p.product)}</b> 갱신 ${esc(r)} (<b>${ddayText(rn)}</b>) — 보험료가 바뀔 수 있어요. 갱신 안내문의 새 보험료를 확인하세요` });
-    const en = p.endDate ? daysLeft(p.endDate) : 999;
+    const en = p.endDate && !renewsAtEnd(p) ? daysLeft(p.endDate) : 999;
     if (en >= 0 && en <= 180) items.push({ urgent: en <= 60, html: `📅 <b>${esc(ownerOf(p))} · ${esc(p.product)}</b> 만기 ${esc(p.endDate)} (<b>${ddayText(en)}</b>) — 끝나면 이 보장이 없어져요. 🧩 보장 점검에서 빈칸을 확인하세요` });
   }
   $("#claimAlert").innerHTML = items.length ? `

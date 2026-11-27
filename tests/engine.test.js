@@ -3,7 +3,7 @@
 const assert = require("assert");
 const path = require("path");
 Object.assign(globalThis, require(path.join(__dirname, "../kcd.js")));
-const { checkClaim, findOverlaps, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, coverageGaps, receivedTotal } = require(path.join(__dirname, "../engine.js"));
+const { checkClaim, findOverlaps, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, renewsAtEnd, coverageGaps, receivedTotal } = require(path.join(__dirname, "../engine.js"));
 const { POLICY_TEMPLATES, buildFromTemplate } = require(path.join(__dirname, "../templates.js"));
 
 let n = 0;
@@ -126,6 +126,12 @@ t("다음 갱신일: 주기마다, 만기 넘으면 없음", () => {
   assert.equal(nextRenewal({ startDate: "2021-11-27", renewYears: 5 }, today), "2026-11-27");
   assert.equal(nextRenewal({ startDate: "2018-03-10", renewYears: 5, endDate: "2028-01-01" }, today), "");
   assert.equal(nextRenewal({ startDate: "2018-03-10" }, today), "");
+  // 10년 만기·10년마다 갱신: 만기일이 곧 갱신일
+  const r10 = { startDate: "2020-03-16", endDate: "2030-03-16", renewYears: 10 };
+  assert.equal(renewsAtEnd(r10), true); assert.equal(nextRenewal(r10, today), "2030-03-16");
+  // 5년마다 갱신 특약 + 80세 만기(23년): 만기는 진짜 끝
+  const r5 = { startDate: "2007-01-25", endDate: "2030-01-25", renewYears: 5 };
+  assert.equal(renewsAtEnd(r5), false); assert.equal(nextRenewal(r5, today), "2027-01-25");
 });
 
 t("보장 빈칸: 있음/없음/일부/모름, 만기 지난 보험은 빼기", () => {
@@ -133,7 +139,9 @@ t("보장 빈칸: 있음/없음/일부/모름, 만기 지난 보험은 빼기", 
   const p1 = { startDate: "2010-01-01", coverages: [
     { name: "암", category: "진단", cause: "질병", codes: ["C00-C97"], amount: 100 },
     { name: "뇌출혈", category: "진단", cause: "질병", codes: ["I60-I62"], amount: 50 },
-    { name: "심장", category: "진단", cause: "질병", codes: [], amount: 30 }] };
+    { name: "심장", category: "진단", cause: "질병", codes: [], amount: 30 },
+    { name: "보험료 납입면제 (암·뇌졸중·급성심근경색증)", category: "진단", cause: "질병", codes: ["C00-C97", "I60-I63", "I21-I23"], amount: 1 },
+    { name: "크로이츠펠트-야콥병 진단비", category: "진단", cause: "질병", codes: [], amount: 9 }] };
   const old = { startDate: "2000-01-01", endDate: "2020-01-01", coverages: [{ name: "실손", category: "실손", cause: "모두", codes: ["*"], amount: 1 }] };
   const g = Object.fromEntries(coverageGaps([p1, old], today).map((x) => [x.key, x]));
   assert.equal(g.암.status, "있음"); assert.equal(g.암.amount, 100);

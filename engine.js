@@ -249,4 +249,19 @@ function requiredDocs(event) {
   return [...docs];
 }
 
-if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, coverageMatchesCode, CATEGORY_LABEL, won };
+// 어느 보험사에 청구할지: 받을 수 있는(✅/⚠️) 보장을 회사별로 묶어요. 확실한 금액이 큰 회사부터.
+function groupByCompany(results) {
+  const map = new Map();
+  for (const r of results) {
+    if (r.status === "불가") continue;
+    const name = (r.policy.company || "").trim() || "회사 이름 미등록";
+    if (!map.has(name)) map.set(name, { company: name, phone: "", sure: 0, maybe: 0, items: [] });
+    const g = map.get(name);
+    if (!g.phone && r.policy.phone) g.phone = r.policy.phone;
+    if (r.status === "가능") g.sure += r.amount; else g.maybe += r.amount;
+    g.items.push(r);
+  }
+  return [...map.values()].sort((a, b) => b.sure - a.sure || b.maybe - a.maybe);
+}
+
+if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, coverageMatchesCode, CATEGORY_LABEL, won };

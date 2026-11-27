@@ -249,6 +249,45 @@ $("#cCode").addEventListener("input", () => {
   const p = parseCode(v);
   $("#cCodeName").textContent = !v ? "" : p ? `👉 ${p.raw}: ${describeCode(v)}${isInjuryCode(v) ? " (상해)" : " (질병)"}` : "코드 모양이 이상해요. 예: C50, I63.9";
 });
+// 병원 서류: 화면에서 보기만 하고 저장하지 않아요 (앱을 닫으면 사라져요)
+let claimDocs = [];
+function renderClaimDocs() {
+  $("#cDocList").innerHTML = claimDocs.map((d, i) => `
+    <div class="doc">
+      ${d.type.startsWith("image/") ? `<img src="${d.url}" alt="${esc(d.name)}" />` : `<a class="pdf" href="${d.url}" target="_blank" rel="noopener">📄 ${esc(d.name)} (눌러서 보기)</a>`}
+      <button class="x" data-deldoc="${i}" aria-label="빼기">✕</button>
+    </div>`).join("");
+}
+$("#cDocs").addEventListener("change", (e) => {
+  for (const f of e.target.files) {
+    if (!(f.type.startsWith("image/") || f.type === "application/pdf")) { toast("사진이나 PDF만 올릴 수 있어요"); continue; }
+    claimDocs.push({ name: f.name, type: f.type, url: URL.createObjectURL(f) });
+  }
+  e.target.value = "";
+  renderClaimDocs();
+});
+$("#cDocList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-deldoc]");
+  if (!b) return;
+  URL.revokeObjectURL(claimDocs[b.dataset.deldoc].url);
+  claimDocs.splice(Number(b.dataset.deldoc), 1);
+  renderClaimDocs();
+});
+
+function companyHTML(groups) {
+  if (!groups.length) return `<div class="box warn"><h3>🏢 어디에 청구할까요?</h3>받을 수 있는 보험사를 못 찾았어요. 입원·수술·병원비 칸도 채워보세요.</div>`;
+  return `<div class="box info">
+      <h3>🏢 어디에 청구할까요? (${groups.length}곳)</h3>
+      <p class="hint">회사마다 청구서를 <b>따로</b> 내요. 같은 서류 사진을 각 회사 앱에 올리면 돼요.</p>
+    </div>` + groups.map((g) => `
+    <div class="panel company">
+      <h3><span>🏢 ${esc(g.company)}</span><span>${g.sure || !g.maybe ? won(g.sure) : "⚠️ " + won(g.maybe)}</span></h3>
+      ${g.sure && g.maybe ? `<div class="hint">⚠️ 확인 필요 ${won(g.maybe)} 더</div>` : !g.sure && g.maybe ? `<div class="hint">⚠️ 조건을 확인해야 하는 금액이에요</div>` : ""}
+      ${g.phone ? `<div class="meta">☎️ <a class="phone" href="tel:${esc(String(g.phone).replace(/[^0-9+]/g, ""))}">${esc(g.phone)}</a></div>` : `<div class="hint">☎️ 전화번호 미등록 (보험 수정에서 넣을 수 있어요)</div>`}
+      <ul>${g.items.map((r) => `<li>${r.status === "가능" ? "✅" : "⚠️"} ${esc(r.coverage.name)} — ${r.amount ? won(r.amount) : "금액 ❓"} <small>(${esc(r.policy.product || "")})</small></li>`).join("")}</ul>
+    </div>`).join("");
+}
+
 $("#runClaim").addEventListener("click", () => {
   const event = {
     code: $("#cCode").value.trim(),
@@ -274,6 +313,8 @@ $("#runClaim").addEventListener("click", () => {
       ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${won(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
     </div>
+    ${companyHTML(groupByCompany(results))}
+    <h3 class="person">📋 보장별 자세히</h3>
     ${results.length ? results.map((r) => `
       <div class="result ${r.status}">
         <div class="top-line"><span>${esc(r.coverage.name)}</span><span>${won(r.amount)}</span></div>

@@ -273,3 +273,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 @media (min-width: 600px) {
   .family { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* 청구 확인: 병원 서류 */
+.filebtn { display: inline-block; cursor: pointer; }
+.filebtn input { display: none; }
+.doclist { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+.doc { position: relative; }
+.doc img { width: 100%; max-height: 70vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
+.doc .pdf { display: block; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); text-decoration: none; }
+.doc .x { position: absolute; top: 6px; right: 6px; border: 0; border-radius: 50%; width: 32px; height: 32px; background: rgba(0,0,0,.6); color: #fff; font-size: 16px; cursor: pointer; }
+.where summary { cursor: pointer; font-weight: 600; margin-top: 6px; }
+.where table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+.where td { padding: 6px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+.where td:first-child { white-space: nowrap; width: 1%; padding-right: 10px; }
+.company h3 { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 8px; }
+.company ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }

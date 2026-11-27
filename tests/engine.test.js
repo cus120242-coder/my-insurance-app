@@ -3,7 +3,7 @@
 const assert = require("assert");
 const path = require("path");
 Object.assign(globalThis, require(path.join(__dirname, "../kcd.js")));
-const { checkClaim, findOverlaps } = require(path.join(__dirname, "../engine.js"));
+const { checkClaim, findOverlaps, groupByCompany } = require(path.join(__dirname, "../engine.js"));
 const { POLICY_TEMPLATES, buildFromTemplate } = require(path.join(__dirname, "../templates.js"));
 
 let n = 0;
@@ -93,6 +93,17 @@ t("실손 중복 찾기", () => {
   const s = { name: "실손", category: "실손", cause: "모두", codes: ["*"], amount: 1 };
   const o = findOverlaps([{ id: "a", coverages: [s] }, { id: "b", coverages: [s] }]);
   assert.equal(o.length, 1); assert.equal(o[0].kind, "warn");
+});
+
+t("어느 보험사에 청구할지 회사별로 묶기", () => {
+  const a = { id: "a", company: "가나생명", phone: "1588", startDate: "2010-01-01", coverages: [
+    { name: "암진단", category: "진단", cause: "질병", codes: ["C00-C97"], amount: 100 },
+    { name: "코드없음", category: "진단", cause: "질병", codes: [], amount: 50 }] };
+  const b = { id: "b", company: "다라화재", startDate: "2010-01-01", coverages: [{ name: "암진단", category: "진단", cause: "질병", codes: ["C00-C97"], amount: 300 }] };
+  const c = { id: "c", company: "마바손보", startDate: "2030-01-01", coverages: [{ name: "암진단", category: "진단", cause: "질병", codes: ["C00-C97"], amount: 900 }] };
+  const g = groupByCompany(checkClaim([a, b, c], { code: "C50", date: "2021-01-01", diagnosis: true }).results);
+  assert.deepEqual(g.map((x) => x.company), ["다라화재", "가나생명"]); // 가입 전 사고(❌)인 회사는 빠져요
+  assert.equal(g[1].sure, 100); assert.equal(g[1].items.length, 2); assert.equal(g[1].phone, "1588");
 });
 
 console.log(`\n모두 통과: ${n}개`);

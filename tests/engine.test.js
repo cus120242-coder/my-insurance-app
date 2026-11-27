@@ -3,7 +3,7 @@
 const assert = require("assert");
 const path = require("path");
 Object.assign(globalThis, require(path.join(__dirname, "../kcd.js")));
-const { checkClaim, findOverlaps, groupByCompany } = require(path.join(__dirname, "../engine.js"));
+const { checkClaim, findOverlaps, groupByCompany, findCodesInText, claimDeadline, daysLeft } = require(path.join(__dirname, "../engine.js"));
 const { POLICY_TEMPLATES, buildFromTemplate } = require(path.join(__dirname, "../templates.js"));
 
 let n = 0;
@@ -104,6 +104,20 @@ t("어느 보험사에 청구할지 회사별로 묶기", () => {
   const g = groupByCompany(checkClaim([a, b, c], { code: "C50", date: "2021-01-01", diagnosis: true }).results);
   assert.deepEqual(g.map((x) => x.company), ["다라화재", "가나생명"]); // 가입 전 사고(❌)인 회사는 빠져요
   assert.equal(g[1].sure, 100); assert.equal(g[1].items.length, 2); assert.equal(g[1].phone, "1588");
+});
+
+t("사진 글자에서 질병코드 후보 찾기", () => {
+  const r = findCodesInText("진료확인서 질병분류기호 k35 , 8 주상병 K35.8 부상병 J20 전화 02-123-4567 TEL A4 KB10");
+  assert.deepEqual(r.map((x) => x.code), ["K35.8", "J20"]);
+  assert.equal(findCodesInText("").length, 0);
+});
+
+t("청구 마감일은 3년 뒤, 남은 날 계산", () => {
+  assert.equal(claimDeadline("2026-11-01"), "2029-11-01");
+  assert.equal(claimDeadline("2024-02-29"), "2027-02-28");
+  assert.equal(claimDeadline(""), "");
+  assert.equal(daysLeft("2026-12-01", new Date(2026, 10, 27)), 4);
+  assert.equal(daysLeft("2026-11-20", new Date(2026, 10, 27)), -7);
 });
 
 console.log(`\n모두 통과: ${n}개`);

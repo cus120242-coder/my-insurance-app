@@ -264,4 +264,36 @@ function groupByCompany(results) {
   return [...map.values()].sort((a, b) => b.sure - a.sure || b.maybe - a.maybe);
 }
 
-if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, coverageMatchesCode, CATEGORY_LABEL, won };
+// 사진에서 읽은 글자 속 질병코드 후보 찾기 (예: "질병분류기호 K35.8"). 사전에 있는 코드와 자주 나온 코드를 앞에
+function findCodesInText(text) {
+  const t = String(text || "").toUpperCase().replace(/[,，·]/g, ".");
+  const re = /(?<![A-Z0-9])([A-Z])\s?(\d{2})(?:\s?\.\s?(\d{1,2}))?(?![0-9])/g;
+  const seen = new Map();
+  let m, order = 0;
+  while ((m = re.exec(t))) {
+    const c = parseCode(m[1] + m[2] + (m[3] ? "." + m[3] : ""));
+    if (!c) continue;
+    const hit = seen.get(c.raw) || { code: c.raw, count: 0, order: order++, known: !/사전에 없는/.test(describeCode(c.raw)) };
+    hit.count++;
+    seen.set(c.raw, hit);
+  }
+  return [...seen.values()].sort((a, b) => b.known - a.known || b.count - a.count || a.order - b.order).slice(0, 6)
+    .map(({ code, known }) => ({ code, known, name: describeCode(code) }));
+}
+
+// 청구 마감일: 보험금 청구는 사고(진단·치료)일로부터 3년 안에 (상법 제662조)
+function claimDeadline(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
+  if (!m) return "";
+  const y = Number(m[1]) + 3, mo = Number(m[2]), d = Number(m[3]);
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate(); // 2월 29일 → 3년 뒤 2월 28일 (늦지 않게)
+  return `${y}-${m[2]}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+// 오늘부터 마감일까지 남은 날 (지나면 음수)
+function daysLeft(deadline, today = new Date()) {
+  const t = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const [y, m, d] = deadline.split("-").map(Number);
+  return Math.round((Date.UTC(y, m - 1, d) - t) / 86400000);
+}
+
+if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, findCodesInText, claimDeadline, daysLeft, coverageMatchesCode, CATEGORY_LABEL, won };

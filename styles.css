@@ -288,3 +288,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .where td:first-child { white-space: nowrap; width: 1%; padding-right: 10px; }
 .company h3 { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 8px; }
 .company ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+.codechips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.codechips .tag { font-size: 15px; padding: 8px 12px; }
+.alert { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.todo .top-line { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; }
+.todo .dday { white-space: nowrap; color: var(--brand); }
+.todo.urgent .dday { color: var(--warn); }
+.todo.done { opacity: .6; }
+.todo-co { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.todo-btns { display: flex; flex-wrap: wrap; gap: 8px; }

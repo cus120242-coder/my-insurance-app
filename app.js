@@ -93,7 +93,7 @@ function showTab(name) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + name));
   if (name === "home") renderHome();
   if (name === "overlap") renderOverlap();
-  if (name === "claim") fillWho();
+  if (name === "claim") { fillWho(); renderClaimTodo(); }
   window.scrollTo(0, 0);
 }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -106,6 +106,7 @@ function shortCodes(codes, cause) {
   return codes.length > 4 ? codes.slice(0, 4).join(", ") + ` 외 ${codes.length - 4}개` : codes.join(", ");
 }
 function renderHome() {
+  renderClaimAlert();
   const empty = policies.length === 0;
   $("#emptyHome").classList.toggle("hidden", !empty);
   if (currentMember !== "전체" && !members().includes(currentMember)) currentMember = "전체";
@@ -257,11 +258,142 @@ function renderClaimDocs() {
       ${d.type.startsWith("image/") ? `<img src="${d.url}" alt="${esc(d.name)}" />` : `<a class="pdf" href="${d.url}" target="_blank" rel="noopener">📄 ${esc(d.name)} (눌러서 보기)</a>`}
       <button class="x" data-deldoc="${i}" aria-label="빼기">✕</button>
     </div>`).join("");
+  $("#cReadCode").classList.toggle("hidden", !claimDocs.length);
+  if (!claimDocs.length) $("#cOcr").innerHTML = "";
 }
+
+// 사진에서 질병코드 읽기: 도구(ocr 폴더)는 버튼을 누를 때만 불러오고, 모두 이 기기 안에서 읽어요
+let ocrLoading = null;
+function loadOcr() {
+  return (ocrLoading ||= new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = "ocr/tesseract.min.js";
+    sc.onload = res;
+    sc.onerror = () => { ocrLoading = null; sc.remove(); rej(new Error("load")); };
+    document.head.appendChild(sc);
+  }));
+}
+$("#cReadCode").addEventListener("click", async () => {
+  const imgs = claimDocs.filter((d) => d.type.startsWith("image/"));
+  if (!imgs.length) return toast("사진을 올려주세요. PDF는 화면을 캡처해서 사진으로 올리면 읽을 수 있어요");
+  const btn = $("#cReadCode"), box = $("#cOcr");
+  const say = (t) => { box.innerHTML = `<p class="hint">⏳ ${t}</p>`; };
+  btn.disabled = true;
+  try {
+    say("읽는 도구를 준비하는 중… (처음 한 번은 약 7MB를 받아서 조금 걸려요)");
+    await loadOcr();
+    const worker = await Tesseract.createWorker("eng", 1, {
+      workerPath: "ocr/worker.min.js", corePath: "ocr", langPath: "ocr", workerBlobURL: false,
+      logger: (m) => { if (m.status === "recognizing text") say(`글자 읽는 중… ${Math.round(m.progress * 100)}%`); },
+    });
+    // 서류는 표 모양이라 "흩어진 글자 찾기"(11)로 먼저 읽고, 못 찾으면 "보통 문서"(3)로 한 번 더
+    let codes = [];
+    for (const psm of ["11", "3"]) {
+      await worker.setParameters({ tessedit_pageseg_mode: psm });
+      let text = "";
+      for (const d of imgs) text += "\n" + (await worker.recognize(d.file)).data.text;
+      codes = findCodesInText(text);
+      if (codes.length) break;
+    }
+    await worker.terminate();
+    box.innerHTML = codes.length
+      ? `<p class="hint">찾은 코드예요. <b>서류에 적힌 것과 같은지 눈으로 확인</b>하고 눌러주세요 (가끔 틀리게 읽어요)</p>
+         <div class="codechips">${codes.map((c) => `<button class="tag have" data-pickcode="${esc(c.code)}">${esc(c.code)}${c.known ? " " + esc(c.name) : ""}</button>`).join("")}</div>`
+      : `<div class="box warn">질병코드를 못 찾았어요. 코드 칸이 크고 밝게 나오게 다시 찍거나, 직접 넣어주세요.</div>`;
+  } catch {
+    box.innerHTML = `<div class="box warn">읽지 못했어요. 처음 한 번은 인터넷이 켜져 있어야 해요. 다시 눌러 주세요.</div>`;
+  }
+  btn.disabled = false;
+});
+$("#cOcr").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pickcode]");
+  if (!b) return;
+  $("#cCode").value = b.dataset.pickcode;
+  $("#cCode").dispatchEvent(new Event("input"));
+  toast(`${b.dataset.pickcode}를 넣었어요`);
+});
+
+// ---------- 청구할 일 + 3년 마감 알림 (이 기기 안에만 저장, 서류 사진은 저장 안 함) ----------
+let claims = store.get("claims", []);
+const saveClaims = () => store.set("claims", claims);
+let lastClaim = null;
+const claimDone = (c) => c.companies.length > 0 && c.companies.every((x) => x.done);
+const ddayText = (n) => (n > 0 ? `D-${n}` : n === 0 ? "오늘 마감" : "마감 지남");
+const pendingClaims = () => claims.filter((c) => !claimDone(c)).sort((a, b) => (a.date < b.date ? -1 : 1));
+function renderClaimAlert() {
+  const list = pendingClaims();
+  if (!list.length) { $("#claimAlert").innerHTML = ""; return; }
+  const c = list[0], n = daysLeft(claimDeadline(c.date));
+  $("#claimAlert").innerHTML = `
+    <div class="box ${n <= 90 ? "warn" : "info"} alert">
+      <b>⏰ 아직 청구 안 한 일 ${list.length}개</b>
+      <div>가장 급한 것: ${face(c.who)} ${esc(c.who)} · ${esc(c.code)} — 마감 ${esc(claimDeadline(c.date))} (<b>${ddayText(n)}</b>)</div>
+      <button class="btn small" data-goto="claim">보러 가기</button>
+    </div>`;
+}
+function renderClaimTodo() {
+  if (!claims.length) { $("#claimTodo").innerHTML = ""; return; }
+  const sorted = [...pendingClaims(), ...claims.filter(claimDone)];
+  $("#claimTodo").innerHTML = `<h2 class="person">⏰ 청구할 일 (${pendingClaims().length}개 남음)</h2>
+    <p class="hint">보험금은 치료받은 날부터 <b>3년 안에</b> 청구해야 해요 (상법 제662조). 청구한 회사는 체크해 두세요.</p>` +
+    sorted.map((c) => {
+      const dl = claimDeadline(c.date), n = daysLeft(dl), done = claimDone(c);
+      return `
+      <div class="panel todo ${done ? "done" : n <= 90 ? "urgent" : ""}">
+        <div class="top-line"><span>${face(c.who)} ${esc(c.who)} · ${esc(c.code)} ${esc(describeCode(c.code) || "")}</span><span class="dday">${done ? "✅ 끝" : ddayText(n)}</span></div>
+        <div class="hint">치료받은 날 ${esc(c.date)} → 청구 마감 <b>${esc(dl)}</b></div>
+        ${!done && n < 0 ? `<div class="box warn">⛔ 3년이 지났어요. 그래도 보험사에 한 번 물어보세요.</div>` : ""}
+        <div class="todo-co">${c.companies.map((x, i) => `<label class="chk"><input type="checkbox" data-claimdone="${esc(c.id)}|${i}" ${x.done ? "checked" : ""} /> 🏢 ${esc(x.name)} 청구했어요</label>`).join("") || `<span class="hint">청구할 보험사를 못 찾았어요</span>`}</div>
+        <div class="todo-btns">
+          ${done ? "" : `<button class="btn small ghost" data-ics="${esc(c.id)}">📅 폰 달력에 마감일 넣기</button>`}
+          <button class="btn small ghost" data-delclaim="${esc(c.id)}">🗑️ 지우기</button>
+        </div>
+      </div>`;
+    }).join("");
+}
+// 폰 달력 파일(.ics): 마감 30일 전·7일 전에 폰이 알려줘요. 건강정보(질병코드)는 넣지 않아요
+function icsEsc(t) { return String(t).replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, " "); }
+function downloadIcs(c) {
+  const dl = claimDeadline(c.date), d = dl.replace(/-/g, "");
+  const next = new Date(dl + "T00:00:00Z"); next.setUTCDate(next.getUTCDate() + 1);
+  const d2 = next.toISOString().slice(0, 10).replace(/-/g, "");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+  const alarm = (days) => ["BEGIN:VALARM", `TRIGGER:-P${days}D`, "ACTION:DISPLAY", `DESCRIPTION:보험 청구 마감 ${days}일 전`, "END:VALARM"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//my-insurance-app//KO", "BEGIN:VEVENT",
+    `UID:${c.id}@my-insurance-app`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${d2}`,
+    `SUMMARY:${icsEsc(`보험 청구 마감 (${c.who})`)}`, `DESCRIPTION:${icsEsc(`청구할 곳: ${c.companies.filter((x) => !x.done).map((x) => x.name).join(", ")}`)}`,
+    ...alarm(30), ...alarm(7), "END:VEVENT", "END:VCALENDAR"];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/calendar" }));
+  a.download = `보험청구마감-${dl}.ics`;
+  a.click();
+  toast("받은 파일을 열면 폰 달력에 들어가요");
+}
+$("#claimTodo").addEventListener("change", (e) => {
+  const cb = e.target.closest("[data-claimdone]");
+  if (!cb) return;
+  const [id, i] = cb.dataset.claimdone.split("|");
+  const c = claims.find((x) => x.id === id);
+  if (c) { c.companies[Number(i)].done = cb.checked; saveClaims(); renderClaimTodo(); if (claimDone(c)) toast("다 청구했어요! 👏"); }
+});
+$("#claimTodo").addEventListener("click", (e) => {
+  const ics = e.target.closest("[data-ics]"), del = e.target.closest("[data-delclaim]");
+  if (ics) { const c = claims.find((x) => x.id === ics.dataset.ics); if (c) downloadIcs(c); }
+  if (del && confirm("이 청구할 일을 지울까요?")) { claims = claims.filter((x) => x.id !== del.dataset.delclaim); saveClaims(); renderClaimTodo(); }
+});
+$("#claimResult").addEventListener("click", (e) => {
+  if (!e.target.closest("#saveClaim") || !lastClaim) return;
+  const same = claims.find((x) => x.who === lastClaim.who && x.code === lastClaim.code && x.date === lastClaim.date);
+  if (same) {
+    for (const co of lastClaim.companies) if (!same.companies.some((x) => x.name === co.name)) same.companies.push(co);
+  } else claims.push({ id: "c" + Date.now().toString(36), ...lastClaim });
+  saveClaims(); renderClaimTodo(); toast("청구할 일에 저장했어요. 맨 위에서 볼 수 있어요");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 $("#cDocs").addEventListener("change", (e) => {
   for (const f of e.target.files) {
     if (!(f.type.startsWith("image/") || f.type === "application/pdf")) { toast("사진이나 PDF만 올릴 수 있어요"); continue; }
-    claimDocs.push({ name: f.name, type: f.type, url: URL.createObjectURL(f) });
+    claimDocs.push({ name: f.name, type: f.type, file: f, url: URL.createObjectURL(f) });
   }
   e.target.value = "";
   renderClaimDocs();
@@ -306,6 +438,9 @@ $("#runClaim").addEventListener("click", () => {
   const who = $("#cWho").value;
   const { results, sure, maybe } = checkClaim(policies.filter((p) => ownerOf(p) === who), event);
   const label = { 가능: "✅ 청구 가능", 확인필요: "⚠️ 확인 필요", 불가: "❌ 해당 안 됨" };
+  const groups = groupByCompany(results);
+  const deadline = claimDeadline(event.date);
+  lastClaim = deadline ? { who, code: parseCode(event.code).raw, date: event.date, companies: groups.map((g) => ({ name: g.company, done: false })) } : null;
   $("#claimResult").innerHTML = `
     <div class="total">
       <div class="k">${face(who)} ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — ✅ 확실한 예상 보험금</div>
@@ -313,7 +448,14 @@ $("#runClaim").addEventListener("click", () => {
       ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${won(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
     </div>
-    ${companyHTML(groupByCompany(results))}
+    ${companyHTML(groups)}
+    <div class="panel">
+      <h3>⏰ 청구 마감일</h3>
+      ${deadline ? `<p>치료받은 날부터 3년 → <b>${esc(deadline)}</b>까지 (${ddayText(daysLeft(deadline))})</p>
+        ${groups.length ? `<button class="btn" id="saveClaim">💾 청구할 일로 저장 (마감 알림)</button>
+        <p class="hint">저장하면 📋 내 보험 맨 위에 아직 청구 안 한 일이 보여요. 서류 사진은 저장하지 않아요.</p>` : ""}`
+        : `<p class="hint">진단·치료받은 날을 넣으면 마감일을 알려줘요.</p>`}
+    </div>
     <h3 class="person">📋 보장별 자세히</h3>
     ${results.length ? results.map((r) => `
       <div class="result ${r.status}">
@@ -512,7 +654,7 @@ $("#saveSettings").addEventListener("click", () => {
 });
 $("#exportData").addEventListener("click", () => {
   // 가족 명단도 같이 담아요 (예전 파일처럼 보험만 있는 배열도 불러올 수 있어요)
-  const data = { app: "내 보험 한눈에", version: 2, family: members(), avatars, policies };
+  const data = { app: "내 보험 한눈에", version: 2, family: members(), avatars, policies, claims };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -531,6 +673,10 @@ $("#importData").addEventListener("change", async (e) => {
     if (data.avatars && typeof data.avatars === "object") {
       for (const [k, v] of Object.entries(data.avatars)) if (!avatars[k] && avatarId(v)) avatars[k] = avatarId(v);
       saveAvatars();
+    }
+    if (Array.isArray(data.claims)) {
+      for (const c of data.claims) if (c && c.id && Array.isArray(c.companies) && !claims.some((x) => x.id === c.id)) claims.push(c);
+      saveClaims();
     }
     let added = 0, updated = 0;
     for (const p of list) {
@@ -561,7 +707,7 @@ $("#importData").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 $("#clearData").addEventListener("click", () => {
-  if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; family = []; save(); saveFamily(); currentMember = "전체"; renderHome(); toast("전부 지웠어요"); }
+  if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; family = []; claims = []; save(); saveFamily(); saveClaims(); currentMember = "전체"; renderHome(); toast("전부 지웠어요"); }
 });
 
 // ---------- 잠금 (숫자 4자리) ----------

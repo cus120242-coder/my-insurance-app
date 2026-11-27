@@ -146,7 +146,7 @@ function renderHome() {
         <div>
           <div class="name">${esc(p.product)}</div>
           <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}</div>
+          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}${nextRenewal(p) ? `<span class="tag">🔄 ${esc(p.renewYears)}년 갱신 · 다음 ${esc(nextRenewal(p))}</span>` : ""}${p.endDate && p.endDate < todayStr() ? `<span class="tag miss">⛔ 만기 끝남</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -320,21 +320,35 @@ let lastClaim = null;
 const claimDone = (c) => c.companies.length > 0 && c.companies.every((x) => x.done);
 const ddayText = (n) => (n > 0 ? `D-${n}` : n === 0 ? "오늘 마감" : "마감 지남");
 const pendingClaims = () => claims.filter((c) => !claimDone(c)).sort((a, b) => (a.date < b.date ? -1 : 1));
+// 📋 내 보험 맨 위 알림: 청구 마감 · 갱신(60일 안) · 만기(180일 안)
 function renderClaimAlert() {
+  const items = [];
   const list = pendingClaims();
-  if (!list.length) { $("#claimAlert").innerHTML = ""; return; }
-  const c = list[0], n = daysLeft(claimDeadline(c.date));
-  $("#claimAlert").innerHTML = `
-    <div class="box ${n <= 90 ? "warn" : "info"} alert">
-      <b>⏰ 아직 청구 안 한 일 ${list.length}개</b>
-      <div>가장 급한 것: ${face(c.who)} ${esc(c.who)} · ${esc(c.code)} — 마감 ${esc(claimDeadline(c.date))} (<b>${ddayText(n)}</b>)</div>
-      <button class="btn small" data-goto="claim">보러 가기</button>
-    </div>`;
+  if (list.length) {
+    const c = list[0], n = daysLeft(claimDeadline(c.date));
+    items.push({ urgent: n <= 90, html: `⏰ <b>아직 청구 안 한 일 ${list.length}개</b> · 가장 급한 것: ${esc(c.who)} ${esc(c.code)} 마감 ${esc(claimDeadline(c.date))} (<b>${ddayText(n)}</b>) <button class="btn small" data-goto="claim">보러 가기</button>` });
+  }
+  for (const p of policies) {
+    const r = nextRenewal(p), rn = r ? daysLeft(r) : 999;
+    if (rn <= 60) items.push({ urgent: rn <= 14, html: `🔄 <b>${esc(ownerOf(p))} · ${esc(p.product)}</b> 갱신 ${esc(r)} (<b>${ddayText(rn)}</b>) — 보험료가 바뀔 수 있어요. 갱신 안내문의 새 보험료를 확인하세요` });
+    const en = p.endDate ? daysLeft(p.endDate) : 999;
+    if (en >= 0 && en <= 180) items.push({ urgent: en <= 60, html: `📅 <b>${esc(ownerOf(p))} · ${esc(p.product)}</b> 만기 ${esc(p.endDate)} (<b>${ddayText(en)}</b>) — 끝나면 이 보장이 없어져요. 🧩 보장 점검에서 빈칸을 확인하세요` });
+  }
+  $("#claimAlert").innerHTML = items.length ? `
+    <div class="box ${items.some((x) => x.urgent) ? "warn" : "info"} alert">
+      <b>🔔 알림 ${items.length}개</b>
+      <ul>${items.map((x) => `<li>${x.html}</li>`).join("")}</ul>
+    </div>` : "";
 }
 function renderClaimTodo() {
   if (!claims.length) { $("#claimTodo").innerHTML = ""; return; }
   const sorted = [...pendingClaims(), ...claims.filter(claimDone)];
-  $("#claimTodo").innerHTML = `<h2 class="person">⏰ 청구할 일 (${pendingClaims().length}개 남음)</h2>
+  const year = new Date().getFullYear();
+  const people = [...new Set(claims.map((c) => c.who))];
+  const got = receivedTotal(claims);
+  $("#claimTodo").innerHTML = (got ? `<div class="box info"><b>💵 받은 보험금</b> 올해 ${won(receivedTotal(claims, year))} · 전체 ${won(got)}
+      <ul>${people.map((m) => { const v = receivedTotal(claims.filter((c) => c.who === m), year); return v ? `<li>${face(m)} ${esc(m)} 올해 ${won(v)}</li>` : ""; }).join("")}</ul></div>` : "") +
+    `<h2 class="person">⏰ 청구할 일 (${pendingClaims().length}개 남음)</h2>
     <p class="hint">보험금은 치료받은 날부터 <b>3년 안에</b> 청구해야 해요 (상법 제662조). 청구한 회사는 체크해 두세요.</p>` +
     sorted.map((c) => {
       const dl = claimDeadline(c.date), n = daysLeft(dl), done = claimDone(c);
@@ -343,7 +357,8 @@ function renderClaimTodo() {
         <div class="top-line"><span>${face(c.who)} ${esc(c.who)} · ${esc(c.code)} ${esc(describeCode(c.code) || "")}</span><span class="dday">${done ? "✅ 끝" : ddayText(n)}</span></div>
         <div class="hint">치료받은 날 ${esc(c.date)} → 청구 마감 <b>${esc(dl)}</b></div>
         ${!done && n < 0 ? `<div class="box warn">⛔ 3년이 지났어요. 그래도 보험사에 한 번 물어보세요.</div>` : ""}
-        <div class="todo-co">${c.companies.map((x, i) => `<label class="chk"><input type="checkbox" data-claimdone="${esc(c.id)}|${i}" ${x.done ? "checked" : ""} /> 🏢 ${esc(x.name)} 청구했어요</label>`).join("") || `<span class="hint">청구할 보험사를 못 찾았어요</span>`}</div>
+        <div class="todo-co">${c.companies.map((x, i) => `<div class="co-row"><label class="chk"><input type="checkbox" data-claimdone="${esc(c.id)}|${i}" ${x.done ? "checked" : ""} /> 🏢 ${esc(x.name)} 청구했어요</label>
+          ${x.done ? `<label class="got">💵 받은 돈 <input type="number" min="0" inputmode="numeric" data-received="${esc(c.id)}|${i}" value="${esc(x.received || "")}" placeholder="입금되면 넣기" />원</label>` : ""}</div>`).join("") || `<span class="hint">청구할 보험사를 못 찾았어요</span>`}</div>
         <div class="todo-btns">
           ${done ? "" : `<button class="btn small ghost" data-ics="${esc(c.id)}">📅 폰 달력에 마감일 넣기</button>`}
           <button class="btn small ghost" data-delclaim="${esc(c.id)}">🗑️ 지우기</button>
@@ -370,6 +385,13 @@ function downloadIcs(c) {
   toast("받은 파일을 열면 폰 달력에 들어가요");
 }
 $("#claimTodo").addEventListener("change", (e) => {
+  const rv = e.target.closest("[data-received]");
+  if (rv) {
+    const [id, i] = rv.dataset.received.split("|");
+    const c = claims.find((x) => x.id === id);
+    if (c) { const co = c.companies[Number(i)]; co.received = Number(rv.value) || 0; co.receivedDate = todayStr(); saveClaims(); renderClaimTodo(); toast("받은 돈을 적어 뒀어요"); }
+    return;
+  }
   const cb = e.target.closest("[data-claimdone]");
   if (!cb) return;
   const [id, i] = cb.dataset.claimdone.split("|");
@@ -472,7 +494,20 @@ $("#runClaim").addEventListener("click", () => {
 });
 
 // ---------- 3. 중복 체크 ----------
+function renderGaps() {
+  const people = members().filter((m) => policies.some((p) => ownerOf(p) === m && !isThing(p)));
+  if (!people.length) { $("#gapResult").innerHTML = ""; return; }
+  const icon = { 있음: "✅", 없음: "❌", 일부: "⚠️", 모름: "❓" };
+  $("#gapResult").innerHTML = `<h2 class="person">🧩 가족 보장 빈칸</h2>
+    <p class="hint">지금 살아 있는 보험(만기 전)만 봐요. ❌는 그 보장이 <b>없다</b>는 뜻이에요. 얼마가 알맞은지는 집마다 달라서 앱이 정하지 않아요.</p>
+    <div class="gapwrap"><table class="gaps"><tr><th></th>${GAP_CHECKS.map((g) => `<th>${g.label}</th>`).join("")}</tr>
+    ${people.map((m) => `<tr><th>${face(m)} ${esc(m)}</th>${coverageGaps(policies.filter((p) => ownerOf(p) === m)).map((g) =>
+      `<td class="g-${g.status}" title="${esc(g.msg || "")}">${icon[g.status]}${g.amount ? `<br /><small>${won(g.amount)}</small>` : ""}${g.msg ? `<br /><small>${esc(g.msg)}</small>` : ""}</td>`).join("")}</tr>`).join("")}
+    </table></div>
+    <p class="hint">✅ 있음 · ❌ 없음 · ⚠️ 일부만 · ❓ 약관 코드가 없어 모름. 진단 금액은 같은 보장 여러 개를 더한 거예요 (이미 받은 1회 보장은 빼요).</p>`;
+}
 function renderOverlap() {
+  renderGaps();
   if (!policies.length) { $("#overlapResult").innerHTML = `<div class="empty">먼저 보험을 등록해주세요.</div>`; return; }
   $("#overlapResult").innerHTML = `<p class="hint">겹치는 보장은 <b>같은 사람</b>의 보험끼리만 비교해요.</p>` + members().map((m) => {
     const list = findOverlaps(policies.filter((p) => ownerOf(p) === m));
@@ -538,6 +573,7 @@ function fillForm(p = {}, keepFiles = false) {
   $("#fPremium").value = p.premium || "";
   $("#fStart").value = p.startDate || "";
   $("#fEnd").value = p.endDate || "";
+  $("#fRenew").value = p.renewYears || "";
   $("#covRows").innerHTML = (p.coverages && p.coverages.length ? p.coverages : [{}]).map(covRowHTML).join("");
 }
 let editingDocs = {};
@@ -580,6 +616,7 @@ function readForm() {
     premium: Number($("#fPremium").value) || 0,
     startDate: $("#fStart").value,
     endDate: $("#fEnd").value,
+    renewYears: Number($("#fRenew").value) || "",
     ...Object.fromEntries(Object.entries(editingExtra).filter(([, v]) => v != null)),
     docs: { ...editingDocs },
     coverages,
@@ -636,7 +673,7 @@ $("#tplApply").addEventListener("click", () => {
   document.querySelectorAll("[data-unit]").forEach((i) => (units[i.dataset.unit] = Number(i.value) || 0));
   if (!units.main) return toast("주계약 구좌 수를 넣어주세요 (증권에 있어요)");
   const built = buildFromTemplate(t, units);
-  fillForm({ ...built, id: editingId, docs: editingDocs, owner: $("#fOwner").value, payDay: $("#fPayDay").value, phone: $("#fPhone").value, premium: $("#fPremium").value, startDate: $("#fStart").value, endDate: $("#fEnd").value }, true);
+  fillForm({ ...built, id: editingId, docs: editingDocs, owner: $("#fOwner").value, payDay: $("#fPayDay").value, phone: $("#fPhone").value, premium: $("#fPremium").value, startDate: $("#fStart").value, endDate: $("#fEnd").value, renewYears: $("#fRenew").value }, true);
   $("#aiStatus").textContent = "";
   toast(`보장 ${built.coverages.length}개를 채웠어요. ②에서 누구 보험인지·가입일을 넣고 저장하세요`);
   $("#fOwner").scrollIntoView({ behavior: "smooth" });

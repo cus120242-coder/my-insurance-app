@@ -30,22 +30,23 @@
 | `avatars.js` | 가족 캐릭터 그림 14개 (디디가 그린 SVG). 저장값은 id(mom, dad, house, car…), 예전 이모지도 읽음 |
 | `sw.js` | 인터넷 없이도 열리게 앱 파일만 보관 (보험 정보는 안 다룸). http로 열 때만 등록 |
 | `privacy.html` | 개인정보 처리방침 (플레이스토어 필수). 앱이 하는 일이 바뀌면 같이 고친다 |
-| `app.js` | 버튼 동작, 가족 카드, 잠금, 백업/불러오기 (기기 안 localStorage + IndexedDB). 청구 확인의 "📷 병원 서류 올리기"는 화면에 보여주기만 하고 저장하지 않음. "⏰ 청구할 일"(`localStorage.claims`)은 내 보험 맨 위 알림 + 폰 달력 파일(.ics, 마감 30·7일 전 알림, 질병코드는 안 넣음) |
+| `app.js` | 버튼 동작, 가족 카드, 잠금, 백업/불러오기 (기기 안 localStorage + IndexedDB). 청구 확인의 "📷 병원 서류 올리기"는 화면에 보여주기만 하고 저장하지 않음. "⏰ 청구할 일"(`localStorage.claims`, 보험사별 청구 체크 + 💵 받은 돈)은 내 보험 맨 위 🔔 알림(청구 마감·갱신 60일 전·만기 180일 전) + 폰 달력 파일(.ics, 마감 30·7일 전 알림, 질병코드는 안 넣음) |
 | `ocr/` | 사진에서 질병코드 읽기 (tesseract.js 5.1.1, 영어 글자 데이터). **기기 안에서만** 돌고 "🔎 자동으로 찾기"를 누를 때만 불러옴 (약 7MB). 표 모양 서류라 PSM 11 → 못 찾으면 3. 한글은 못 읽음. Playwright 확인은 `file://`에서 일꾼(worker)이 안 돌아서 `python3 -m http.server`로 연다 |
-| `engine.js` | 청구 계산 (`checkClaim`), 보험사별 묶기 (`groupByCompany`: 청구 결과 맨 위 "🏢 어디에 청구할까요?"), 중복 찾기 (`findOverlaps`), 사진 글자에서 질병코드 찾기 (`findCodesInText`), 청구 마감 3년 (`claimDeadline`·`daysLeft`, 상법 제662조) |
+| `engine.js` | 청구 계산 (`checkClaim`), 보험사별 묶기 (`groupByCompany`: 청구 결과 맨 위 "🏢 어디에 청구할까요?"), 중복 찾기 (`findOverlaps`), 사진 글자에서 질병코드 찾기 (`findCodesInText`), 청구 마감 3년 (`claimDeadline`·`daysLeft`, 상법 제662조), 다음 갱신일 (`nextRenewal`), 보장 빈칸 (`coverageGaps`: 암 C16·뇌경색 I63(뇌출혈 I61만이면 "일부")·심근경색 I21 진단, 실비·수술·입원 있음/없음 — 금액 추천은 안 함), 받은 보험금 합계 (`receivedTotal`) |
 | `kcd.js` | 질병코드 범위 비교 (소수점 코드 지원: D47.1, S02.5) |
 | `templates.js` | 디디가 약관을 읽고 만든 상품 틀 (구좌 수 곱하기) |
 | `gemini.js` | 제미나이로 증권/약관 읽기 — **지금은 숨김** (index.html에서 불러오지 않음, CSP `connect-src 'none'`, 저장된 키는 시작할 때 삭제). 다시 켜려면 사용자 동의 후 `#aiBox`·설정 패널의 hidden, 스크립트 태그, CSP를 되돌린다 |
 | `sample-data.js` | 가짜 예시 보험 |
+| 🧩 보장 점검 탭 (`#tab-overlap`) | 가족 보장 빈칸 표 (`renderGaps`) + 겹치는 보장 |
 | (index.html `#tab-help`) | 📖 사용법 화면 |
 
 ## 데이터 형식
-- 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, payEnd("YYYY-MM" 마지막 납입 달, 지나면 저절로 납입 완료·합계 제외), phone, payNote, memo, policySource(증권 내용 반영 표시), termsSource, preExistingRule, units, docs, coverages[] }`
+- 보험: `{ id, owner, company, product, type, startDate, endDate, premium, payDay, payEnd("YYYY-MM" 마지막 납입 달, 지나면 저절로 납입 완료·합계 제외), renewYears(갱신 주기 년, 비갱신은 빈 칸 — 증권에 적힌 것만), phone, payNote, memo, policySource(증권 내용 반영 표시), termsSource, preExistingRule, units, docs, coverages[] }`
 - 보장: `{ name, category(진단|수술|입원|통원|실손|사망|기타), cause(질병|상해|모두), codes[], excludeCodes[], amount, amountsByClass{1..5}, waitingDays, reductionYears, reductionRate, deductDays, minDays(N일 이상 입원해야 첫날부터), maxDays, icuOnly, silsonKind(입원|통원), selfPayRate, minDeduct, onceOnly, paidBefore, conditions[{codes,msg}], note, source, amountText(숫자가 아닌 금액 표시, 예: "무한") }`
   - 자동차보험은 보험 `type: "자동차"`, 집(주택화재)보험은 `type: "주택"`, 보장은 모두 `category: "기타"`(보여주기만)
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).
   - `category: 사망/기타`는 보여주기만 하고 청구 계산에서는 빠진다.
-- 청구할 일: `{ id, who, code, date(치료받은 날), companies[{name, done}] }` — 마감은 date + 3년
+- 청구할 일: `{ id, who, code, date(치료받은 날), companies[{name, done, received?, receivedDate?}] }` — 마감은 date + 3년
 - 백업 파일: `{ app, version: 2, family[], avatars?{이름: 캐릭터id}, policies[], claims?[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
 
 ## 테스트
@@ -55,7 +56,7 @@
 - 확인 후 `main`에 push → GitHub Pages가 1~3분 뒤 반영.
 
 ## 현재 상태 (새 대화에서 이어갈 때)
-- 가족 보험 데이터는 사용자의 불러오기 파일에만 있다 (상품 이름·가입 내용은 여기 적지 않는다). 2026-11-24에 증권 사진으로 보험을 더 추가했고, 약관이 없는 보장은 "확인 필요"(codes 빈 칸)로 두었다. 같은 상품의 약관 항목이 이미 있으면 복사해서 금액만 바꾼다. 2026-11-25까지 모든 보험의 약관을 받아 질병코드를 채웠다 (약관에 코드 표가 없는 보장 1개만 "확인 필요"). 약관 PDF가 글자 없이 보이면 PyMuPDF(`pymupdf`)로 글자를 뽑거나 쪽을 그림으로 그려 읽는다 (pdftotext·pdftoppm은 일부 글꼴을 못 읽음). 아직 등록 안 한 증권이 1개쯤 남았다 (새 대화에서 사용자에게 물어본다). 자동 시험 16개 통과.
+- 가족 보험 데이터는 사용자의 불러오기 파일에만 있다 (상품 이름·가입 내용은 여기 적지 않는다). 2026-11-24에 증권 사진으로 보험을 더 추가했고, 약관이 없는 보장은 "확인 필요"(codes 빈 칸)로 두었다. 같은 상품의 약관 항목이 이미 있으면 복사해서 금액만 바꾼다. 2026-11-25까지 모든 보험의 약관을 받아 질병코드를 채웠다 (약관에 코드 표가 없는 보장 1개만 "확인 필요"). 약관 PDF가 글자 없이 보이면 PyMuPDF(`pymupdf`)로 글자를 뽑거나 쪽을 그림으로 그려 읽는다 (pdftotext·pdftoppm은 일부 글꼴을 못 읽음). 아직 등록 안 한 증권이 1개쯤 남았다 (새 대화에서 사용자에게 물어본다). 자동 시험 19개 통과. 갱신형 보험은 가족 JSON을 받으면 증권의 갱신 주기를 `renewYears`에 넣는다 (증권에 없으면 비워 둠).
 - 증권 사진 원본은 불러오기 파일에 아직 안 넣었다 (넣으려면 사진마다 개인정보를 픽셀에서 지우고 눈으로 확인).
 - 실제 가족 데이터는 이 저장소에 없다. 사용자가 보관 중인 `우리가족-보험-전체.json`(+ `원본포함-*.json`)을 새 대화에 올려야 수정할 수 있다. 이전 대화의 작업 폴더(scratchpad) 파일은 이어지지 않는다.
 - 데이터를 고칠 때: 사용자가 올린 JSON을 읽고 → 수정 → 개인정보 전수 검사 → 새 JSON을 보내준다.

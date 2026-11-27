@@ -296,4 +296,58 @@ function daysLeft(deadline, today = new Date()) {
   return Math.round((Date.UTC(y, m - 1, d) - t) / 86400000);
 }
 
-if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, findCodesInText, claimDeadline, daysLeft, coverageMatchesCode, CATEGORY_LABEL, won };
+// 날짜 글자 "YYYY-MM-DD"에 n년 더해서 글자로 (2월 29일 → 2월 28일)
+function addYearsStr(dateStr, n) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
+  if (!m) return "";
+  const y = Number(m[1]) + n, mo = Number(m[2]);
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return `${y}-${m[2]}-${String(Math.min(Number(m[3]), last)).padStart(2, "0")}`;
+}
+const todayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// 다음 갱신일: 가입일부터 renewYears(갱신 주기)마다. 만기가 지나면 없음
+function nextRenewal(p, today = new Date()) {
+  const n = Number(p.renewYears);
+  if (!n || !p.startDate) return "";
+  const t = todayStr(today);
+  for (let k = 1; k < 200; k++) {
+    const d = addYearsStr(p.startDate, n * k);
+    if (!d) return "";
+    if (p.endDate && d >= p.endDate) return "";
+    if (d >= t) return d;
+  }
+  return "";
+}
+
+// 가족 한 사람의 큰 보장이 있는지 (있다/없다/모름만, 금액 추천은 안 해요). 만기 지난 보험과 차·집 보험은 빼요
+const GAP_CHECKS = [
+  { key: "암", label: "🎗️ 암 진단", category: "진단", code: "C16" },
+  { key: "뇌", label: "🧠 뇌졸중 진단", category: "진단", code: "I63", partialCode: "I61", partialMsg: "뇌출혈만 (뇌경색은 안 됨)" },
+  { key: "심장", label: "❤️ 심근경색 진단", category: "진단", code: "I21" },
+  { key: "실비", label: "🏥 실비", category: "실손" },
+  { key: "수술", label: "🔪 수술비", category: "수술" },
+  { key: "입원", label: "🛏️ 입원비", category: "입원" },
+];
+function coverageGaps(policies, today = new Date()) {
+  const t = todayStr(today);
+  const active = policies.filter((p) => p.type !== "자동차" && p.type !== "주택" && !(p.endDate && p.endDate < t));
+  return GAP_CHECKS.map((g) => {
+    const covs = active.flatMap((p) => (p.coverages || []).filter((c) => c.category === g.category && !c.paidBefore));
+    if (!g.code) return { ...g, status: covs.length ? "있음" : "없음", amount: 0, count: covs.length };
+    const known = covs.filter((c) => c.codes && c.codes.length);
+    const hit = known.filter((c) => coverageMatchesCode(c, g.code));
+    if (hit.length) return { ...g, status: "있음", amount: hit.reduce((s, c) => s + (Number(c.amount) || 0), 0), count: hit.length };
+    if (g.partialCode && known.some((c) => coverageMatchesCode(c, g.partialCode))) return { ...g, status: "일부", amount: 0, count: 0, msg: g.partialMsg };
+    if (covs.length > known.length) return { ...g, status: "모름", amount: 0, count: 0, msg: "질병코드 미등록 보장이 있어요" };
+    return { ...g, status: "없음", amount: 0, count: 0 };
+  });
+}
+
+// 받은 보험금 합계 (year를 주면 그해에 받은 것만)
+function receivedTotal(claims, year) {
+  return (claims || []).reduce((s, c) => s + (c.companies || []).reduce((t, x) =>
+    t + (x.received && (!year || String(x.receivedDate || c.date || "").startsWith(String(year))) ? Number(x.received) || 0 : 0), 0), 0);
+}
+
+if (typeof module !== "undefined") module.exports = { checkClaim, findOverlaps, requiredDocs, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, coverageGaps, receivedTotal, coverageMatchesCode, CATEGORY_LABEL, won };

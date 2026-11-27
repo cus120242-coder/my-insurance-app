@@ -297,3 +297,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .todo.done { opacity: .6; }
 .todo-co { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
 .todo-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.alert ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.alert li .btn { margin-left: 4px; }
+.co-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.got { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 0; }
+.got input { width: 130px; margin: 0; padding: 6px 8px; }
+.gapwrap { overflow-x: auto; margin-bottom: 8px; }
+.gaps { border-collapse: collapse; width: 100%; min-width: 520px; background: var(--card); border-radius: 12px; font-size: 14px; }
+.gaps th, .gaps td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: top; }
+.gaps tr th:first-child { text-align: left; white-space: nowrap; }
+.gaps th { font-size: 13px; color: var(--muted); }
+.gaps td small { color: var(--muted); }
+.gaps .g-없음 { background: var(--warn-soft); }

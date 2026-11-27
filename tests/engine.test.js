@@ -3,7 +3,7 @@
 const assert = require("assert");
 const path = require("path");
 Object.assign(globalThis, require(path.join(__dirname, "../kcd.js")));
-const { checkClaim, findOverlaps, groupByCompany, findCodesInText, claimDeadline, daysLeft } = require(path.join(__dirname, "../engine.js"));
+const { checkClaim, findOverlaps, groupByCompany, findCodesInText, claimDeadline, daysLeft, nextRenewal, coverageGaps, receivedTotal } = require(path.join(__dirname, "../engine.js"));
 const { POLICY_TEMPLATES, buildFromTemplate } = require(path.join(__dirname, "../templates.js"));
 
 let n = 0;
@@ -118,6 +118,33 @@ t("청구 마감일은 3년 뒤, 남은 날 계산", () => {
   assert.equal(claimDeadline(""), "");
   assert.equal(daysLeft("2026-12-01", new Date(2026, 10, 27)), 4);
   assert.equal(daysLeft("2026-11-20", new Date(2026, 10, 27)), -7);
+});
+
+t("다음 갱신일: 주기마다, 만기 넘으면 없음", () => {
+  const today = new Date(2026, 10, 27);
+  assert.equal(nextRenewal({ startDate: "2018-03-10", renewYears: 5 }, today), "2028-03-10");
+  assert.equal(nextRenewal({ startDate: "2021-11-27", renewYears: 5 }, today), "2026-11-27");
+  assert.equal(nextRenewal({ startDate: "2018-03-10", renewYears: 5, endDate: "2028-01-01" }, today), "");
+  assert.equal(nextRenewal({ startDate: "2018-03-10" }, today), "");
+});
+
+t("보장 빈칸: 있음/없음/일부/모름, 만기 지난 보험은 빼기", () => {
+  const today = new Date(2026, 10, 27);
+  const p1 = { startDate: "2010-01-01", coverages: [
+    { name: "암", category: "진단", cause: "질병", codes: ["C00-C97"], amount: 100 },
+    { name: "뇌출혈", category: "진단", cause: "질병", codes: ["I60-I62"], amount: 50 },
+    { name: "심장", category: "진단", cause: "질병", codes: [], amount: 30 }] };
+  const old = { startDate: "2000-01-01", endDate: "2020-01-01", coverages: [{ name: "실손", category: "실손", cause: "모두", codes: ["*"], amount: 1 }] };
+  const g = Object.fromEntries(coverageGaps([p1, old], today).map((x) => [x.key, x]));
+  assert.equal(g.암.status, "있음"); assert.equal(g.암.amount, 100);
+  assert.equal(g.뇌.status, "일부");
+  assert.equal(g.심장.status, "모름");
+  assert.equal(g.실비.status, "없음");
+});
+
+t("받은 보험금 합계 (해마다)", () => {
+  const cl = [{ date: "2026-03-01", companies: [{ name: "A", done: true, received: 100, receivedDate: "2026-04-01" }, { name: "B", done: true, received: 50, receivedDate: "2027-01-05" }] }];
+  assert.equal(receivedTotal(cl), 150); assert.equal(receivedTotal(cl, 2026), 100);
 });
 
 console.log(`\n모두 통과: ${n}개`);

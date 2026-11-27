@@ -198,6 +198,7 @@ $("#kindFilter").addEventListener("click", (e) => {
 });
 $("#family").addEventListener("click", (e) => {
   const b = e.target.closest("[data-member]");
+  if (b && famDragged) return;
   if (b) { currentMember = currentMember === b.dataset.member ? "전체" : b.dataset.member; renderHome(); }
   if (e.target.closest("[data-addmember]")) {
     const name = (prompt("가족 이름을 넣어주세요 (예: 엄마, 아빠, 큰딸, 작은딸)") || "").trim();
@@ -206,6 +207,40 @@ $("#family").addEventListener("click", (e) => {
     family.push(name); saveFamily(); renderHome(); toast(`${name}을(를) 추가했어요`);
   }
 });
+// 가족 카드 끌어서 자리 옮기기 (마우스는 바로, 폰은 꾹 누른 뒤 끌기)
+let famDrag = null, famDragged = false;
+$("#family").addEventListener("pointerdown", (e) => {
+  const card = e.target.closest("[data-member]");
+  if (!card || e.button > 0) return;
+  famDrag = { card, x: e.clientX, y: e.clientY, on: false, ready: e.pointerType === "mouse" };
+  if (!famDrag.ready) famDrag.timer = setTimeout(() => { if (famDrag) { famDrag.ready = true; card.classList.add("lifting"); } }, 400);
+});
+$("#family").addEventListener("touchmove", (e) => { if (famDrag && famDrag.ready) e.preventDefault(); }, { passive: false });
+window.addEventListener("pointermove", (e) => {
+  if (!famDrag) return;
+  const far = Math.hypot(e.clientX - famDrag.x, e.clientY - famDrag.y) > 8;
+  if (!famDrag.ready) { if (far) { clearTimeout(famDrag.timer); famDrag = null; } return; }
+  if (!famDrag.on && far) { famDrag.on = true; famDrag.card.classList.add("dragging"); try { famDrag.card.setPointerCapture(e.pointerId); } catch {} }
+  if (!famDrag.on) return;
+  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest("#family [data-member]");
+  if (over && over !== famDrag.card) {
+    const r = over.getBoundingClientRect();
+    over.parentNode.insertBefore(famDrag.card, e.clientX > r.left + r.width / 2 ? over.nextSibling : over);
+  }
+});
+const endFamDrag = () => {
+  if (!famDrag) return;
+  clearTimeout(famDrag.timer);
+  const { card, on } = famDrag; famDrag = null;
+  card.classList.remove("dragging", "lifting");
+  if (!on) return;
+  famDragged = true; setTimeout(() => (famDragged = false), 0);
+  family = [...$("#family").querySelectorAll("[data-member]")].map((b) => b.dataset.member);
+  saveFamily(); renderHome(); toast("자리를 옮겼어요");
+};
+window.addEventListener("pointerup", endFamDrag);
+window.addEventListener("pointercancel", endFamDrag);
+$("#family").addEventListener("contextmenu", (e) => { if (e.target.closest("[data-member]")) e.preventDefault(); });
 $("#memberTools").addEventListener("click", (e) => {
   const m = currentMember;
   if (e.target.closest("[data-allmembers]")) { currentMember = "전체"; renderHome(); }
@@ -222,10 +257,14 @@ $("#memberTools").addEventListener("click", (e) => {
   if (e.target.closest("[data-renamemember]")) {
     const name = (prompt("새 이름", m) || "").trim();
     if (!name || name === m) return;
-    if (members().includes(name)) return toast("이미 있는 이름이에요");
-    family = members().map((x) => (x === m ? name : x)); saveFamily();
-    if (avatars[m]) { avatars[name] = avatars[m]; delete avatars[m]; saveAvatars(); }
+    // 보험 0개인 같은 이름 카드가 있으면 그 카드와 합쳐요 (불러오기 뒤 이름이 둘로 갈린 경우)
+    if (members().includes(name) && policies.some((p) => ownerOf(p) === name)) return toast("이미 있는 이름이에요");
+    const merge = members().includes(name);
+    family = members().filter((x) => !(merge && x === name)).map((x) => (x === m ? name : x)); saveFamily();
+    if (avatars[m] && !avatars[name]) avatars[name] = avatars[m];
+    if (avatars[m]) { delete avatars[m]; saveAvatars(); }
     policies.forEach((p) => { if (ownerOf(p) === m) p.owner = name; }); save();
+    claims.forEach((c) => { if (c.who === m) c.who = name; }); saveClaims();
     currentMember = name; renderHome(); toast("이름을 바꿨어요");
   }
   if (e.target.closest("[data-removemember]")) {
@@ -703,16 +742,22 @@ $("#importData").addEventListener("change", async (e) => {
     const data = JSON.parse(await e.target.files[0].text());
     const list = Array.isArray(data) ? data : data && Array.isArray(data.policies) ? data.policies : null;
     if (!list) throw new Error();
+    // 앱에서 바꾼 이름은 지켜요: 이미 있는 보험인데 주인 이름이 다르면 앱의 이름을 써요
+    const renamed = {};
+    for (const p of list) {
+      const old = policies.find((x) => x.id === p.id);
+      if (old && ownerOf(old) !== ownerOf(p)) { renamed[ownerOf(p)] = ownerOf(old); p.owner = old.owner; }
+    }
     if (data.family && Array.isArray(data.family)) {
-      for (const m of data.family) if (m && !members().includes(m)) family.push(m);
+      for (const m of data.family) if (m && !renamed[m] && !members().includes(m)) family.push(m);
       saveFamily();
     }
     if (data.avatars && typeof data.avatars === "object") {
-      for (const [k, v] of Object.entries(data.avatars)) if (!avatars[k] && avatarId(v)) avatars[k] = avatarId(v);
+      for (const [k, v] of Object.entries(data.avatars)) if (!renamed[k] && !avatars[k] && avatarId(v)) avatars[k] = avatarId(v);
       saveAvatars();
     }
     if (Array.isArray(data.claims)) {
-      for (const c of data.claims) if (c && c.id && Array.isArray(c.companies) && !claims.some((x) => x.id === c.id)) claims.push(c);
+      for (const c of data.claims) if (c && c.id && Array.isArray(c.companies) && !claims.some((x) => x.id === c.id)) { if (renamed[c.who]) c.who = renamed[c.who]; claims.push(c); }
       saveClaims();
     }
     let added = 0, updated = 0;

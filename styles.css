@@ -309,3 +309,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .gaps th { font-size: 13px; color: var(--muted); }
 .gaps td small { color: var(--muted); }
 .gaps .g-없음 { background: var(--warn-soft); }
+
+/* 가족 카드 끌어서 옮기기 */
+#family [data-member] { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#family .fam.lifting { transform: scale(1.04); }
+#family .fam.dragging { opacity: .6; transform: scale(1.04); cursor: grabbing; box-shadow: 0 8px 20px rgba(0,0,0,.2); }

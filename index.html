@@ -10,11 +10,25 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <meta name="theme-color" content="#3b5bff" />
   <meta name="color-scheme" content="light" />
-  <script src="theme.js?v=40"></script>
+  <script src="theme.js?v=41"></script>
   <meta name="apple-mobile-web-app-title" content="내 보험" />
-  <link rel="stylesheet" href="styles.css?v=40" />
+  <link rel="stylesheet" href="styles.css?v=41" />
 </head>
 <body>
+  <!-- 지우기·수정 전 비밀번호 -->
+  <div id="guard" class="lock guard hidden">
+    <div class="lockbox panel">
+      <div class="lockicon">🔐</div>
+      <h2>비밀번호 4자리</h2>
+      <p class="hint">지우거나 고치기 전에 확인해요</p>
+      <input id="guardPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" />
+      <div class="actions" style="justify-content:center">
+        <button class="btn" id="guardOk">확인</button>
+        <button class="btn ghost" id="guardCancel">취소</button>
+      </div>
+      <div id="guardMsg" class="hint"></div>
+    </div>
+  </div>
   <!-- 잠금 화면 -->
   <div id="lock" class="lock hidden">
     <div class="lockbox">
@@ -278,6 +292,17 @@
       </div>
 
       <div class="panel">
+        <h2>🔐 지우기·수정 비밀번호</h2>
+        <p class="hint" id="editPinState"></p>
+        <label>비밀번호 4자리 <input id="sEditPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></label>
+        <div class="actions">
+          <button class="btn" id="setEditPin">켜기 / 바꾸기</button>
+          <button class="btn ghost" id="removeEditPin">끄기</button>
+        </div>
+        <p class="hint">※ 보험 수정·삭제, 가족 이름 바꾸기·빼기, 청구할 일 지우기, 백업 불러오기, 전부 지우기 전에 물어봐요. 한 번 맞히면 5분 동안은 안 물어요.<br />※ 잊으면 되찾을 수 없어요. 그럴 땐 "백업 파일 받기"로 파일을 받아 두고, 폰 설정에서 이 앱의 저장 공간을 지운 뒤 다시 불러오면 돼요.</p>
+      </div>
+
+      <div class="panel">
         <h2>내 데이터 · 가족과 나누기</h2>
         <p class="hint">👨‍👩‍👧 가족 공유: "백업 파일 받기"로 만든 파일을 카톡 등으로 보내고, 받은 사람이 "백업 불러오기"를 누르면 돼요. 이미 있는 보험은 그대로 두고 합쳐져요.</p>
         <p class="hint">보험 정보와 증권·약관 파일은 서버로 가지 않고 이 기기에만 저장돼요. 백업 파일에는 보장 내용만 들어가고, 증권·약관 원본 파일은 빠져요.</p>
@@ -293,11 +318,11 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="kcd.js?v=40"></script>
-  <script src="engine.js?v=40"></script>
-  <script src="sample-data.js?v=40"></script>
-  <script src="templates.js?v=40"></script>
-  <script src="avatars.js?v=40"></script>
-  <script src="app.js?v=40"></script>
+  <script src="kcd.js?v=41"></script>
+  <script src="engine.js?v=41"></script>
+  <script src="sample-data.js?v=41"></script>
+  <script src="templates.js?v=41"></script>
+  <script src="avatars.js?v=41"></script>
+  <script src="app.js?v=41"></script>
 </body>
 </html>

@@ -49,6 +49,26 @@ function easyWon(n) {
 let editingId = null;
 const save = () => store.set("policies", policies);
 
+// ---------- 고치기 비밀번호 (지우기·수정 전에 한 번 묻기) ----------
+// 한 번 맞히면 5분 동안은 다시 안 물어요. 비밀번호는 저장할 때 해시로만 보관해요 (hashPin은 아래 잠금에 있어요)
+let guardUntil = 0;
+function askEditPin() {
+  if (!store.get("editPin", null) || Date.now() < guardUntil) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const box = $("#guard"), inp = $("#guardPin"), msg = $("#guardMsg");
+    inp.value = ""; msg.textContent = ""; box.classList.remove("hidden"); setTimeout(() => inp.focus(), 50);
+    const done = (ok) => { box.classList.add("hidden"); $("#guardOk").onclick = $("#guardCancel").onclick = inp.oninput = inp.onkeydown = null; resolve(ok); };
+    const check = async () => {
+      if (pinOk(inp.value) && (await hashPin(inp.value)) === store.get("editPin", null)) { guardUntil = Date.now() + 5 * 60 * 1000; done(true); }
+      else { msg.textContent = "비밀번호가 달라요"; inp.value = ""; }
+    };
+    $("#guardOk").onclick = check;
+    $("#guardCancel").onclick = () => done(false);
+    inp.oninput = () => { if (inp.value.length === 4) check(); };
+    inp.onkeydown = (e) => { if (e.key === "Escape") done(false); };
+  });
+}
+
 // ---------- 가족 ----------
 const ownerOf = (p) => (p.owner || "").trim() || "나";
 // 가족 명단 (보험이 없어도 카드로 보여줘요) + 보험에 적힌 사람
@@ -182,7 +202,7 @@ function renderHome() {
       </table>
     </article>`).join("");
 }
-$("#policyList").addEventListener("click", (e) => {
+$("#policyList").addEventListener("click", async (e) => {
   const edit = e.target.closest("[data-edit]");
   const view = e.target.closest("[data-view]");
   if (view) {
@@ -195,6 +215,7 @@ $("#policyList").addEventListener("click", (e) => {
       else { const a = document.createElement("a"); a.href = url; a.download = f.name || "file"; a.click(); }
     });
   }
+  if (edit && !(await askEditPin())) return;
   if (edit) { fillForm(policies.find((p) => p.id === edit.dataset.edit)); showTab("add"); }
 });
 $("#kindFilter").addEventListener("click", (e) => {
@@ -246,7 +267,7 @@ const endFamDrag = () => {
 window.addEventListener("pointerup", endFamDrag);
 window.addEventListener("pointercancel", endFamDrag);
 $("#family").addEventListener("contextmenu", (e) => { if (e.target.closest("[data-member]")) e.preventDefault(); });
-$("#memberTools").addEventListener("click", (e) => {
+$("#memberTools").addEventListener("click", async (e) => {
   const m = currentMember;
   if (e.target.closest("[data-allmembers]")) { currentMember = "전체"; renderHome(); }
   if (e.target.closest("[data-pickface]")) {
@@ -260,6 +281,7 @@ $("#memberTools").addEventListener("click", (e) => {
     saveAvatars(); renderHome(); toast("캐릭터를 바꿨어요");
   }
   if (e.target.closest("[data-renamemember]")) {
+    if (!(await askEditPin())) return;
     const name = (prompt("새 이름", m) || "").trim();
     if (!name || name === m) return;
     // 보험 0개인 같은 이름 카드가 있으면 그 카드와 합쳐요 (불러오기 뒤 이름이 둘로 갈린 경우)
@@ -273,11 +295,13 @@ $("#memberTools").addEventListener("click", (e) => {
     currentMember = name; renderHome(); toast("이름을 바꿨어요");
   }
   if (e.target.closest("[data-removemember]")) {
+    if (!(await askEditPin())) return;
     if (policies.some((p) => ownerOf(p) === m)) return toast(`${m}의 보험이 있어서 뺄 수 없어요. 보험을 먼저 지우거나 다른 사람으로 옮겨주세요`);
     family = family.filter((x) => x !== m); saveFamily(); currentMember = "전체"; renderHome(); toast("명단에서 뺐어요");
   }
 });
-$("#loadSample").addEventListener("click", () => {
+$("#loadSample").addEventListener("click", async () => {
+  if (policies.length && !(await askEditPin())) return;
   policies = JSON.parse(JSON.stringify(SAMPLE_POLICIES));
   save(); renderHome(); toast("예시 보험을 불러왔어요");
 });
@@ -442,10 +466,10 @@ $("#claimTodo").addEventListener("change", (e) => {
   const c = claims.find((x) => x.id === id);
   if (c) { c.companies[Number(i)].done = cb.checked; saveClaims(); renderClaimTodo(); if (claimDone(c)) toast("다 청구했어요! 👏"); }
 });
-$("#claimTodo").addEventListener("click", (e) => {
+$("#claimTodo").addEventListener("click", async (e) => {
   const ics = e.target.closest("[data-ics]"), del = e.target.closest("[data-delclaim]");
   if (ics) { const c = claims.find((x) => x.id === ics.dataset.ics); if (c) downloadIcs(c); }
-  if (del && confirm("이 청구할 일을 지울까요?")) { claims = claims.filter((x) => x.id !== del.dataset.delclaim); saveClaims(); renderClaimTodo(); }
+  if (del && (await askEditPin()) && confirm("이 청구할 일을 지울까요?")) { claims = claims.filter((x) => x.id !== del.dataset.delclaim); saveClaims(); renderClaimTodo(); }
 });
 $("#claimResult").addEventListener("click", (e) => {
   if (!e.target.closest("#saveClaim") || !lastClaim) return;
@@ -684,8 +708,9 @@ $("#savePolicy").addEventListener("click", async () => {
 });
 $("#resetForm").addEventListener("click", () => fillForm());
 // 보험 지우기는 수정 화면 안에서만 (카드에서 잘못 누르지 않게)
-$("#deletePolicy").addEventListener("click", () => {
+$("#deletePolicy").addEventListener("click", async () => {
   const p = policies.find((x) => x.id === editingId);
+  if (p && !(await askEditPin())) return;
   if (!p || !confirm(`「${p.product || "이 보험"}」을 지울까요?\n지우면 되돌릴 수 없어요.`)) return;
   policies = policies.filter((x) => x.id !== p.id);
   Object.keys(DOC_KINDS).forEach((k) => fileDB.del(`${p.id}:${k}`).catch(() => {}));
@@ -752,6 +777,7 @@ $("#exportData").addEventListener("click", () => {
   a.click();
 });
 $("#importData").addEventListener("change", async (e) => {
+  if (!(await askEditPin())) { e.target.value = ""; return; }
   try {
     const data = JSON.parse(await e.target.files[0].text());
     const list = Array.isArray(data) ? data : data && Array.isArray(data.policies) ? data.policies : null;
@@ -811,7 +837,8 @@ $("#importData").addEventListener("change", async (e) => {
   } catch { toast("백업 파일이 아닌 것 같아요"); }
   e.target.value = "";
 });
-$("#clearData").addEventListener("click", () => {
+$("#clearData").addEventListener("click", async () => {
+  if (!(await askEditPin())) return;
   if (confirm("등록한 보험을 전부 지울까요? (되돌릴 수 없어요)")) { policies = []; family = []; claims = []; save(); saveFamily(); saveClaims(); currentMember = "전체"; renderHome(); toast("전부 지웠어요"); }
 });
 
@@ -824,13 +851,15 @@ async function hashPin(pin) {
 const pinOk = (v) => /^\d{4}$/.test(v);
 function showPinState() { $("#pinState").textContent = store.get("pin", null) ? "✅ 지금 잠금이 켜져 있어요" : "지금은 잠금이 꺼져 있어요"; }
 $("#setPin").addEventListener("click", async () => {
+  if (!(await askEditPin())) return;
   const v = $("#sPin").value.trim();
   if (!pinOk(v)) return toast("숫자 4자리를 넣어주세요");
   store.set("pin", await hashPin(v));
   $("#sPin").value = ""; showPinState(); toast("잠금을 켰어요. 다음에 열 때 물어봐요");
 });
-$("#removePin").addEventListener("click", () => {
+$("#removePin").addEventListener("click", async () => {
   if (!store.get("pin", null)) return toast("잠금이 이미 꺼져 있어요");
+  if (!(await askEditPin())) return;
   if (confirm("잠금을 끌까요?")) { localStorage.removeItem("pin"); showPinState(); toast("잠금을 껐어요"); }
 });
 async function tryUnlock() {
@@ -848,6 +877,20 @@ $("#lockForgot").addEventListener("click", async () => {
 });
 if (store.get("pin", null)) { $("#lock").classList.remove("hidden"); setTimeout(() => $("#lockPin").focus(), 50); }
 showPinState();
+function showEditPinState() { $("#editPinState").textContent = store.get("editPin", null) ? "✅ 지금 켜져 있어요. 지우기·수정 전에 비밀번호를 물어봐요" : "지금은 꺼져 있어요"; }
+$("#setEditPin").addEventListener("click", async () => {
+  const v = $("#sEditPin").value.trim();
+  if (!pinOk(v)) return toast("숫자 4자리를 넣어주세요");
+  if (!(await askEditPin())) return;
+  store.set("editPin", await hashPin(v)); guardUntil = 0;
+  $("#sEditPin").value = ""; showEditPinState(); toast("이제 지우기·수정 전에 비밀번호를 물어봐요");
+});
+$("#removeEditPin").addEventListener("click", async () => {
+  if (!store.get("editPin", null)) return toast("이미 꺼져 있어요");
+  if (!(await askEditPin())) return;
+  if (confirm("지우기·수정 비밀번호를 끌까요?")) { localStorage.removeItem("editPin"); showEditPinState(); toast("껐어요"); }
+});
+showEditPinState();
 
 fillForm();
 renderHome();

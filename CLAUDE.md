@@ -31,7 +31,7 @@
 | `avatars.js` | 가족 캐릭터 그림 14개 (디디가 그린 SVG). 저장값은 id(mom, dad, house, car…), 예전 이모지도 읽음 |
 | `sw.js` | 인터넷 없이도 열리게 앱 파일만 보관 (보험 정보는 안 다룸). http로 열 때만 등록 |
 | `privacy.html` | 개인정보 처리방침 (플레이스토어 필수). 앱이 하는 일이 바뀌면 같이 고친다 |
-| `app.js` | 버튼 동작, 가족 카드, 잠금, 백업/불러오기 (기기 안 localStorage + IndexedDB). 청구 확인의 "📷 병원 서류 올리기"는 화면에 보여주기만 하고 저장하지 않음. "⏰ 청구할 일"(`localStorage.claims`, 보험사별 청구 체크 + 💵 받은 돈)은 내 보험 맨 위 🔔 알림(청구 마감·갱신 60일 전·만기 180일 전) + 폰 달력 파일(.ics, 마감 30·7일 전 알림, 질병코드는 안 넣음) |
+| `app.js` | 버튼 동작, 가족 카드(끌어서 자리 옮기기: 마우스 바로, 폰은 꾹 누른 뒤), 잠금, 🔐 지우기·수정 비밀번호(`localStorage.editPin` 해시, `askEditPin()`: 보험 수정(삭제는 수정 화면 안 `#deletePolicy`)·이름 바꾸기·빼기·청구 지우기·불러오기·전부 지우기 전, 맞히면 5분 통과), 백업/불러오기 (기기 안 localStorage + IndexedDB). 청구 확인의 "📷 병원 서류 올리기"는 화면에 보여주기만 하고 저장하지 않음. "⏰ 청구할 일"(`localStorage.claims`, 보험사별 청구 체크 + 💵 받은 돈)은 내 보험 맨 위 🔔 알림(청구 마감·갱신 60일 전·만기 180일 전) + 폰 달력 파일(.ics, 마감 30·7일 전 알림, 질병코드는 안 넣음) |
 | `ocr/` | 사진에서 질병코드 읽기 (tesseract.js 5.1.1, 영어 글자 데이터). **기기 안에서만** 돌고 "🔎 자동으로 찾기"를 누를 때만 불러옴 (약 7MB). 표 모양 서류라 PSM 11 → 못 찾으면 3. 한글은 못 읽음. Playwright 확인은 `file://`에서 일꾼(worker)이 안 돌아서 `python3 -m http.server`로 연다 |
 | `engine.js` | 청구 계산 (`checkClaim`), 보험사별 묶기 (`groupByCompany`: 청구 결과 맨 위 "🏢 어디에 청구할까요?"), 중복 찾기 (`findOverlaps`), 사진 글자에서 질병코드 찾기 (`findCodesInText`), 청구 마감 3년 (`claimDeadline`·`daysLeft`, 상법 제662조), 다음 갱신일 (`nextRenewal`), 보장 빈칸 (`coverageGaps`: 암 C16·뇌경색 I63(뇌출혈 I61만이면 "일부")·심근경색 I21 진단, 실비·수술·입원 있음/없음 — 금액 추천은 안 함), 받은 보험금 합계 (`receivedTotal`) |
 | `kcd.js` | 질병코드 범위 비교 (소수점 코드 지원: D47.1, S02.5) |
@@ -48,7 +48,7 @@
   - `codes`가 비어 있으면 "질병코드 미등록 → 확인 필요"로 처리된다 (약관 받기 전 상태).
   - `category: 사망/기타`는 보여주기만 하고 청구 계산에서는 빠진다.
 - 청구할 일: `{ id, who, code, date(치료받은 날), companies[{name, done, received?, receivedDate?}] }` — 마감은 date + 3년
-- 백업 파일: `{ app, version: 2, family[], avatars?{이름: 캐릭터id}, policies[], claims?[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음)
+- 백업 파일: `{ app, version: 2, family[], avatars?{이름: 캐릭터id}, policies[], claims?[], files? }` — `files`는 `{"보험id:증권|약관": {name, type, data(base64)}}` (원본 파일 같이 넣기) (예전의 보험 배열만 있는 파일도 불러올 수 있음). 불러오기는 파일의 이름(owner)대로 덮고, 이름이 바뀌어 보험 0개가 된 예전 이름 카드는 새 이름 자리로 옮긴다
 
 ## 테스트
 - 계산 엔진 자동 시험: `node tests/engine.test.js` (가짜 데이터만 사용). 엔진을 고치면 꼭 실행하고, 새 규칙을 넣으면 시험도 추가한다.

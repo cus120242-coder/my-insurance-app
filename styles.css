@@ -116,7 +116,7 @@ button.tag { border: 0; cursor: pointer; font-family: inherit; }
 .lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .lockbox { width: 100%; max-width: 320px; text-align: center; }
 .lockicon { font-size: 48px; }
-#lockPin { text-align: center; font-size: 28px; letter-spacing: 12px; }
+#lockPin, #guardPin { text-align: center; font-size: 28px; letter-spacing: 12px; }
 .fam.add { min-width: 90px; text-align: center; color: var(--brand); border-style: dashed; font-weight: 700; }
 .membertools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 10px; font-size: 14px; }
 .membertools:empty { display: none; }
@@ -354,3 +354,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .gapcell.g-일부, .gapcell.g-모름 { background: var(--warn-soft); }
 .nowrap { white-space: nowrap; }
 .hint { word-break: keep-all; }
+/* 지우기·수정 전 비밀번호 창 */
+.lock.guard { background: rgba(0,0,0,.45); z-index: 60; }
+.lock.guard .lockbox { background: var(--card, #fff); }

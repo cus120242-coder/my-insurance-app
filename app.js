@@ -34,6 +34,18 @@ const fileDB = {
 };
 const DOC_KINDS = { 증권: "📄 증권", 약관: "📘 약관" };
 let pendingFiles = { 증권: null, 약관: null };
+// 큰 금액은 "3,000만 원"처럼 읽기 쉽게 (100만 원 미만은 그대로)
+function easyWon(n) {
+  n = Math.round(Number(n) || 0);
+  if (Math.abs(n) < 1000000) return won(n);
+  const sign = n < 0 ? "-" : ""; n = Math.abs(n);
+  const eok = Math.floor(n / 100000000), man = Math.floor((n % 100000000) / 10000), rest = n % 10000;
+  const parts = [];
+  if (eok) parts.push(eok.toLocaleString("ko-KR") + "억");
+  if (man) parts.push(man.toLocaleString("ko-KR") + "만");
+  if (rest) parts.push(rest.toLocaleString("ko-KR"));
+  return sign + parts.join(" ") + (rest ? "원" : " 원");
+}
 let editingId = null;
 const save = () => store.set("policies", policies);
 
@@ -118,7 +130,7 @@ function renderHome() {
       <div class="face">${face(m, "lg")}</div>
       <div class="who">${esc(m)}</div>
       <div class="sm">보험 ${list.length}개</div>
-      <div class="money">월 ${won(monthly(list))}</div>
+      <div class="money">월 ${easyWon(monthly(list))}</div>
     </button>`;
   }).join("") + `<button class="fam add" data-addmember>＋<br />가족 추가</button>`;
   $("#memberTools").innerHTML = currentMember === "전체" ? "" : `
@@ -138,15 +150,15 @@ function renderHome() {
   $("#summary").innerHTML = empty ? "" : `
     <div class="stat"><div class="k">${currentMember === "전체" ? "가족 전체 보험" : esc(currentMember) + "의 보험"}</div><div class="v">${list.length}개</div></div>
     <div class="stat"><div class="k">보장 항목</div><div class="v">${covCount}개</div></div>
-    <div class="stat"><div class="k">월 보험료 합계</div><div class="v">${won(monthly(list))}</div></div>`;
+    <div class="stat"><div class="k">월 보험료 합계</div><div class="v">${easyWon(monthly(list))}</div></div>`;
 
   $("#policyList").innerHTML = list.map((p) => `
     <article class="policy">
       <header>
         <div>
           <div class="name">${esc(p.product)}</div>
-          <div class="meta">${esc(p.company)} · ${esc(p.startDate || "?")} ~ ${esc(p.endDate || "?")}</div>
-          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${won(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}${nextRenewal(p) ? `<span class="tag">🔄 ${esc(p.renewYears)}년 갱신 · 다음 ${esc(nextRenewal(p))}</span>` : ""}${p.endDate && p.endDate < todayStr() && !renewsAtEnd(p) ? `<span class="tag miss">⛔ 만기 끝남</span>` : ""}</div>
+          <div class="meta">${esc(p.company)} · <span class="nowrap">${esc(p.startDate || "?")} ~</span> <span class="nowrap">${esc(p.endDate || "?")}</span></div>
+          <div><span class="tag owner">${face(ownerOf(p))} ${esc(ownerOf(p))}</span>${isCar(p) ? `<span class="tag fire">🚗 자동차보험</span>` : isHouse(p) ? `<span class="tag fire">🏠 집 보험</span>` : insurerKind(p) ? `<span class="tag ${insurerKind(p) === "생명" ? "life" : "fire"}">${insurerKind(p) === "생명" ? "🏛️ 생명보험" : "🔥 손해보험"}</span>` : ""}${hasSilbi(p) ? `<span class="tag silbi">🏥 실비 포함</span>` : ""}<span class="tag">${esc(p.type)}</span>${paidOff(p) ? `<span class="tag have">✅ 납입 완료 (${esc(payEndText(p))}까지 냄)</span>` : p.premium ? `<span class="tag money">월 ${easyWon(p.premium)}</span>${p.payEnd ? `<span class="tag">${esc(payEndText(p))}까지 납입</span>` : ""}` : ""}${p.payDay ? `<span class="tag">매월 ${esc(p.payDay)}일 납입</span>` : ""}${nextRenewal(p) ? `<span class="tag">🔄 ${esc(p.renewYears)}년 갱신 · 다음 ${esc(nextRenewal(p))}</span>` : ""}${p.endDate && p.endDate < todayStr() && !renewsAtEnd(p) ? `<span class="tag miss">⛔ 만기 끝남</span>` : ""}</div>
           ${p.payNote ? `<div class="meta">💳 ${esc(p.payNote)}</div>` : ""}
           ${p.memo ? `<details class="memo"><summary>📝 꼭 알아둘 조건</summary><ul>${String(p.memo).split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
           ${p.phone ? `<div class="meta">☎️ 고객센터 <a class="phone" href="tel:${esc(String(p.phone).replace(/[^0-9+]/g, ""))}">${esc(p.phone)}</a></div>` : ""}
@@ -158,21 +170,19 @@ function renderHome() {
           ${p.termsSource ? `<div class="meta">📘 약관 규칙: 디디가 정리한 「${esc(p.termsSource)}」${p.units ? ` · 주계약 ${esc(p.units.main)}구좌` : ""}</div>` : !(p.docs && p.docs.약관) ? `<div class="meta">약관이 없어서 질병코드·면책·감액 조건을 확인 못 했어요</div>` : ""}
         </div>
         <div>
-          <button class="btn small ghost" data-edit="${esc(p.id)}">수정</button>
-          <button class="btn small danger" data-del="${esc(p.id)}">삭제</button>
+          <button class="btn editbtn" data-edit="${esc(p.id)}" aria-label="이 보험 고치기">✏️ 수정</button>
         </div>
       </header>
       <table class="covs">
         ${(p.coverages || []).map((c) => `
           <tr>
             <td>${esc(c.name)}${c.paidBefore ? ` <span class="tag miss">이미 받음</span>` : ""}<div class="codes">${isThing(p) ? esc(c.note || "") : `${esc(c.category)} · ${esc(c.cause || "모두")} · ${esc(shortCodes(c.codes, c.cause))}${c.waitingDays ? ` · 면책 ${c.waitingDays}일` : ""}`}</div></td>
-            <td class="amt${c.amountText ? " txt" : ""}">${c.amountText ? esc(c.amountText) : c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${esc(k)}종 ${won(v)}`).join("<br />") : won(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
+            <td class="amt${c.amountText ? " txt" : ""}">${c.amountText ? esc(c.amountText) : c.amountsByClass ? Object.entries(c.amountsByClass).map(([k, v]) => `${esc(k)}종 ${easyWon(v)}`).join("<br />") : easyWon(c.amount) + (c.category === "입원" ? "/일" : c.category === "통원" ? "/회" : "")}</td>
           </tr>`).join("")}
       </table>
     </article>`).join("");
 }
 $("#policyList").addEventListener("click", (e) => {
-  const del = e.target.closest("[data-del]");
   const edit = e.target.closest("[data-edit]");
   const view = e.target.closest("[data-view]");
   if (view) {
@@ -184,11 +194,6 @@ $("#policyList").addEventListener("click", (e) => {
       if (safe) window.open(url, "_blank");
       else { const a = document.createElement("a"); a.href = url; a.download = f.name || "file"; a.click(); }
     });
-  }
-  if (del && confirm("이 보험을 지울까요?")) {
-    policies = policies.filter((p) => p.id !== del.dataset.del);
-    Object.keys(DOC_KINDS).forEach((k) => fileDB.del(`${del.dataset.del}:${k}`).catch(() => {}));
-    save(); renderHome(); toast("지웠어요");
   }
   if (edit) { fillForm(policies.find((p) => p.id === edit.dataset.edit)); showTab("add"); }
 });
@@ -385,8 +390,8 @@ function renderClaimTodo() {
   const year = new Date().getFullYear();
   const people = [...new Set(claims.map((c) => c.who))];
   const got = receivedTotal(claims);
-  $("#claimTodo").innerHTML = (got ? `<div class="box info"><b>💵 받은 보험금</b> 올해 ${won(receivedTotal(claims, year))} · 전체 ${won(got)}
-      <ul>${people.map((m) => { const v = receivedTotal(claims.filter((c) => c.who === m), year); return v ? `<li>${face(m)} ${esc(m)} 올해 ${won(v)}</li>` : ""; }).join("")}</ul></div>` : "") +
+  $("#claimTodo").innerHTML = (got ? `<div class="box info"><b>💵 받은 보험금</b> 올해 ${easyWon(receivedTotal(claims, year))} · 전체 ${easyWon(got)}
+      <ul>${people.map((m) => { const v = receivedTotal(claims.filter((c) => c.who === m), year); return v ? `<li>${face(m)} ${esc(m)} 올해 ${easyWon(v)}</li>` : ""; }).join("")}</ul></div>` : "") +
     `<h2 class="person">⏰ 청구할 일 (${pendingClaims().length}개 남음)</h2>
     <p class="hint">보험금은 치료받은 날부터 <b>3년 안에</b> 청구해야 해요 (상법 제662조). 청구한 회사는 체크해 두세요.</p>` +
     sorted.map((c) => {
@@ -474,10 +479,10 @@ function companyHTML(groups) {
       <p class="hint">회사마다 청구서를 <b>따로</b> 내요. 같은 서류 사진을 각 회사 앱에 올리면 돼요.</p>
     </div>` + groups.map((g) => `
     <div class="panel company">
-      <h3><span>🏢 ${esc(g.company)}</span><span>${g.sure || !g.maybe ? won(g.sure) : "⚠️ " + won(g.maybe)}</span></h3>
-      ${g.sure && g.maybe ? `<div class="hint">⚠️ 확인 필요 ${won(g.maybe)} 더</div>` : !g.sure && g.maybe ? `<div class="hint">⚠️ 조건을 확인해야 하는 금액이에요</div>` : ""}
+      <h3><span>🏢 ${esc(g.company)}</span><span>${g.sure || !g.maybe ? easyWon(g.sure) : "⚠️ " + easyWon(g.maybe)}</span></h3>
+      ${g.sure && g.maybe ? `<div class="hint">⚠️ 확인 필요 ${easyWon(g.maybe)} 더</div>` : !g.sure && g.maybe ? `<div class="hint">⚠️ 조건을 확인해야 하는 금액이에요</div>` : ""}
       ${g.phone ? `<div class="meta">☎️ <a class="phone" href="tel:${esc(String(g.phone).replace(/[^0-9+]/g, ""))}">${esc(g.phone)}</a></div>` : `<div class="hint">☎️ 전화번호 미등록 (보험 수정에서 넣을 수 있어요)</div>`}
-      <ul>${g.items.map((r) => `<li>${r.status === "가능" ? "✅" : "⚠️"} ${esc(r.coverage.name)} — ${r.amount ? won(r.amount) : "금액 ❓"} <small>(${esc(r.policy.product || "")})</small></li>`).join("")}</ul>
+      <ul>${g.items.map((r) => `<li>${r.status === "가능" ? "✅" : "⚠️"} ${esc(r.coverage.name)} — ${r.amount ? easyWon(r.amount) : "금액 ❓"} <small>(${esc(r.policy.product || "")})</small></li>`).join("")}</ul>
     </div>`).join("");
 }
 
@@ -505,8 +510,8 @@ $("#runClaim").addEventListener("click", () => {
   $("#claimResult").innerHTML = `
     <div class="total">
       <div class="k">${face(who)} ${esc(who)} · ${esc(event.code.toUpperCase())} ${esc(describeCode(event.code))} — ✅ 확실한 예상 보험금</div>
-      <div class="v">${won(sure)}</div>
-      ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${won(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
+      <div class="v">${easyWon(sure)}</div>
+      ${maybe ? `<div class="k">⚠️ 확인 필요 금액 ${easyWon(maybe)} 더 (조건에 맞는 것만 받아요. 서로 겹치면 일부만)</div>` : ""}
       <div class="k">해당 보장 ${results.length}개 중 받을 수 있는 것 ${results.filter((r) => r.amount > 0).length}개</div>
     </div>
     ${companyHTML(groups)}
@@ -520,7 +525,7 @@ $("#runClaim").addEventListener("click", () => {
     <h3 class="person">📋 보장별 자세히</h3>
     ${results.length ? results.map((r) => `
       <div class="result ${r.status}">
-        <div class="top-line"><span>${esc(r.coverage.name)}</span><span>${won(r.amount)}</span></div>
+        <div class="top-line"><span>${esc(r.coverage.name)}</span><span>${easyWon(r.amount)}</span></div>
         <div class="meta"><span class="badge ${r.status}">${label[r.status]}</span> ${esc(r.policy.company)} · ${esc(r.policy.product)}</div>
         ${r.reasons.length ? `<ul>${r.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
       </div>`).join("") : `<div class="panel">이 코드와 상황에 해당하는 보장을 못 찾았어요. 입원·수술·병원비 칸도 채워보세요.</div>`}
@@ -539,10 +544,10 @@ function renderGaps() {
   const icon = { 있음: "✅", 없음: "❌", 일부: "⚠️", 모름: "❓" };
   $("#gapResult").innerHTML = `<h2 class="person">🧩 가족 보장 빈칸</h2>
     <p class="hint">지금 살아 있는 보험(만기 전)만 봐요. ❌는 그 보장이 <b>없다</b>는 뜻이에요. 얼마가 알맞은지는 집마다 달라서 앱이 정하지 않아요.</p>
-    <div class="gapwrap"><table class="gaps"><tr><th></th>${GAP_CHECKS.map((g) => `<th>${g.label}</th>`).join("")}</tr>
-    ${people.map((m) => `<tr><th>${face(m)} ${esc(m)}</th>${coverageGaps(policies.filter((p) => ownerOf(p) === m)).map((g) =>
-      `<td class="g-${g.status}" title="${esc(g.msg || "")}">${icon[g.status]}${g.amount ? `<br /><small>${won(g.amount)}</small>` : ""}${g.msg ? `<br /><small>${esc(g.msg)}</small>` : ""}</td>`).join("")}</tr>`).join("")}
-    </table></div>
+    ${people.map((m) => `<div class="gapcard"><div class="gapwho">${face(m)} ${esc(m)}</div><div class="gapgrid">
+      ${coverageGaps(policies.filter((p) => ownerOf(p) === m)).map((g) =>
+        `<div class="gapcell g-${g.status}" title="${esc(g.msg || "")}"><div class="gl">${g.label}</div><div class="gv">${icon[g.status]}${g.amount ? ` ${easyWon(g.amount)}` : ""}</div>${g.msg ? `<small>${esc(g.msg)}</small>` : ""}</div>`).join("")}
+    </div></div>`).join("")}
     <p class="hint">✅ 있음 · ❌ 없음 · ⚠️ 일부만 · ❓ 약관 코드가 없어 모름. 진단 금액은 같은 보장 여러 개를 더한 거예요 (이미 받은 1회 보장은 빼요).</p>`;
 }
 function renderOverlap() {
@@ -559,8 +564,8 @@ function overlapHTML(list) {
       <h3>${o.kind === "warn" ? "⚠️" : "ℹ️"} ${esc(o.name)} — ${o.items.length}곳에 있어요</h3>
       <p>${esc(o.message)}</p>
       <table class="covs">
-        ${o.items.map((x) => `<tr><td>${esc(x.p.company)} · ${esc(x.p.product)}</td><td class="amt">${won(x.c.amount)}</td></tr>`).join("")}
-        ${o.kind === "info" ? `<tr><td><b>합치면</b></td><td class="amt">${won(o.total)}</td></tr>` : ""}
+        ${o.items.map((x) => `<tr><td>${esc(x.p.company)} · ${esc(x.p.product)}</td><td class="amt">${easyWon(x.c.amount)}</td></tr>`).join("")}
+        ${o.kind === "info" ? `<tr><td><b>합치면</b></td><td class="amt">${easyWon(o.total)}</td></tr>` : ""}
       </table>
     </div>`).join("");
 }
@@ -593,6 +598,7 @@ $("#covRows").addEventListener("click", (e) => { if (e.target.closest("[data-rm]
 
 function fillForm(p = {}, keepFiles = false) {
   editingId = p.id || null;
+  $("#deletePolicy").classList.toggle("hidden", !policies.some((x) => x.id === editingId));
   editingDocs = { ...(p.docs || {}) };
   editingExtra = { templateId: p.templateId, policySource: p.policySource, termsSource: p.termsSource, preExistingRule: p.preExistingRule, units: p.units, memo: p.memo, payNote: p.payNote, payEnd: p.payEnd };
   if (!keepFiles) {
@@ -677,6 +683,14 @@ $("#savePolicy").addEventListener("click", async () => {
   save(); fillForm(); toast("저장했어요!"); showTab("home");
 });
 $("#resetForm").addEventListener("click", () => fillForm());
+// 보험 지우기는 수정 화면 안에서만 (카드에서 잘못 누르지 않게)
+$("#deletePolicy").addEventListener("click", () => {
+  const p = policies.find((x) => x.id === editingId);
+  if (!p || !confirm(`「${p.product || "이 보험"}」을 지울까요?\n지우면 되돌릴 수 없어요.`)) return;
+  policies = policies.filter((x) => x.id !== p.id);
+  Object.keys(DOC_KINDS).forEach((k) => fileDB.del(`${p.id}:${k}`).catch(() => {}));
+  save(); fillForm(); toast("지웠어요"); showTab("home");
+});
 
 $("#aiRun").addEventListener("click", async () => {
   const policyFile = pendingFiles.증권;

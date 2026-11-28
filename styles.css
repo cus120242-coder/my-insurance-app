@@ -314,3 +314,43 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 #family [data-member] { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #family .fam.lifting { transform: scale(1.04); }
 #family .fam.dragging { opacity: .6; transform: scale(1.04); cursor: grabbing; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+
+/* ================= 2026-11-29 보기 쉽게 다듬기 (디자인 점검 결과) ================= */
+/* 회색 글씨를 조금 더 진하게 */
+:root { --muted: #566070; }
+:root[data-theme="dark"] { --muted: #a9b0bc; }
+/* 작은 글씨 한 단계 키우기 */
+.policy .meta, .hint, .covs .codes, .result ul, .stat .k, .fam .sm { font-size: 14px; }
+.covs .codes { font-size: 13px; }
+.tag { font-size: 13px; }
+.disclaimer { font-size: 13px; }
+/* 맨 위 소개 글: 단어가 중간에 끊기지 않게 */
+.top .sub { word-break: keep-all; text-wrap: balance; }
+/* 보험 개수·보험료 강조는 경고 같은 빨강 대신 파랑 */
+:root { --hot: var(--brand); }
+:root[data-theme="dark"] { --hot: #9db0ff; }
+.tag.money { background: var(--brand-soft); }
+:root[data-theme="dark"] .tag.money { background: var(--brand-soft); }
+/* 분류 버튼: 손가락으로 누르기 쉬운 높이 */
+.kind { min-height: 44px; padding: 10px 15px; font-size: 15px; }
+/* 카드의 수정 버튼: 크게, 하나만 */
+.btn.editbtn { min-height: 44px; padding: 10px 14px; font-size: 15px; white-space: nowrap; background: var(--brand-soft); color: var(--brand); margin: 0; }
+#deletePolicy { display: block; width: 100%; min-height: 48px; margin-top: 24px; font-size: 16px; }
+#deletePolicy.hidden { display: none; }
+/* 아래 메뉴: 글씨 크게, 안 고른 메뉴도 잘 보이게 */
+:root { --nav-h: 70px; }
+.tabs button { font-size: 12.5px; color: var(--text); opacity: .72; padding: 8px 0 6px; min-height: 56px; }
+.tabs button .ic { font-size: 22px; filter: none; opacity: 1; }
+.tabs button.active { opacity: 1; font-weight: 800; }
+/* 가족 보장 빈칸: 사람마다 카드, 화면 안에 다 들어오게 */
+.gapcard { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px; }
+.gapwho { font-weight: 800; font-size: 17px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.gapgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gapcell { border-radius: 12px; padding: 10px; background: var(--field); }
+.gapcell .gl { font-size: 14px; color: var(--muted); font-weight: 600; }
+.gapcell .gv { font-size: 16px; font-weight: 800; margin-top: 2px; word-break: keep-all; }
+.gapcell small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; word-break: keep-all; }
+.gapcell.g-없음 { background: var(--no-soft); }
+.gapcell.g-일부, .gapcell.g-모름 { background: var(--warn-soft); }
+.nowrap { white-space: nowrap; }
+.hint { word-break: keep-all; }

@@ -357,3 +357,4 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 /* 지우기·수정 전 비밀번호 창 */
 .lock.guard { background: rgba(0,0,0,.45); z-index: 60; }
 .lock.guard .lockbox { background: var(--card, #fff); }
+#pinWhen .switch { margin: 8px 0; }

@@ -10,9 +10,9 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <meta name="theme-color" content="#3b5bff" />
   <meta name="color-scheme" content="light" />
-  <script src="theme.js?v=41"></script>
+  <script src="theme.js?v=42"></script>
   <meta name="apple-mobile-web-app-title" content="내 보험" />
-  <link rel="stylesheet" href="styles.css?v=41" />
+  <link rel="stylesheet" href="styles.css?v=42" />
 </head>
 <body>
   <!-- 지우기·수정 전 비밀번호 -->
@@ -281,25 +281,19 @@
         <p class="hint" style="margin:8px 0 0">기본은 밝은 화면이에요. 이 기기에만 적용돼요.</p>
       </div>
       <div class="panel">
-        <h2>🔒 숫자 4자리 잠금</h2>
+        <h2>🔒 비밀번호 4자리</h2>
         <p class="hint" id="pinState"></p>
         <label>새 비밀번호 4자리 <input id="sPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></label>
         <div class="actions">
-          <button class="btn" id="setPin">잠금 켜기 / 바꾸기</button>
-          <button class="btn ghost" id="removePin">잠금 끄기</button>
+          <button class="btn" id="setPin">비밀번호 정하기 / 바꾸기</button>
+          <button class="btn ghost" id="removePin">비밀번호 없애기</button>
         </div>
-        <p class="hint">※ 다른 사람이 화면을 못 열게 막는 "문 잠금"이에요. 기기 안의 자료 자체를 암호로 바꾸는 건 아니라서, 휴대폰 잠금도 꼭 같이 쓰세요.</p>
-      </div>
-
-      <div class="panel">
-        <h2>🔐 지우기·수정 비밀번호</h2>
-        <p class="hint" id="editPinState"></p>
-        <label>비밀번호 4자리 <input id="sEditPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></label>
-        <div class="actions">
-          <button class="btn" id="setEditPin">켜기 / 바꾸기</button>
-          <button class="btn ghost" id="removeEditPin">끄기</button>
+        <div id="pinWhen">
+          <p class="hint" style="margin-bottom:4px"><b>언제 물어볼까요?</b></p>
+          <label class="switch">🔓 앱 열 때 <input type="checkbox" id="pinOpen" /></label>
+          <label class="switch">✏️ 수정·지우기 할 때 <input type="checkbox" id="pinEdit" /></label>
         </div>
-        <p class="hint">※ 보험 수정·삭제, 가족 이름 바꾸기·빼기, 청구할 일 지우기, 백업 불러오기, 전부 지우기 전에 물어봐요. 한 번 맞히면 5분 동안은 안 물어요.<br />※ 잊으면 되찾을 수 없어요. 그럴 땐 "백업 파일 받기"로 파일을 받아 두고, 폰 설정에서 이 앱의 저장 공간을 지운 뒤 다시 불러오면 돼요.</p>
+        <p class="hint">※ 수정·지우기: 보험 수정·삭제, 가족 이름 바꾸기·빼기, 청구할 일 지우기, 백업 불러오기, 전부 지우기. 한 번 맞히면 5분 동안은 안 물어요.<br />※ 다른 사람이 못 열고 못 고치게 막는 "문 잠금"이에요. 휴대폰 잠금도 꼭 같이 쓰세요.<br />※ 잊으면 되찾을 수 없어요. 앱 열 때 "비밀번호를 잊었어요"를 누르면 이 기기 자료를 지우고 새로 시작해요 (백업 파일로 다시 불러올 수 있어요).</p>
       </div>
 
       <div class="panel">
@@ -318,11 +312,11 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="kcd.js?v=41"></script>
-  <script src="engine.js?v=41"></script>
-  <script src="sample-data.js?v=41"></script>
-  <script src="templates.js?v=41"></script>
-  <script src="avatars.js?v=41"></script>
-  <script src="app.js?v=41"></script>
+  <script src="kcd.js?v=42"></script>
+  <script src="engine.js?v=42"></script>
+  <script src="sample-data.js?v=42"></script>
+  <script src="templates.js?v=42"></script>
+  <script src="avatars.js?v=42"></script>
+  <script src="app.js?v=42"></script>
 </body>
 </html>

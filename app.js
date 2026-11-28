@@ -49,17 +49,25 @@ function easyWon(n) {
 let editingId = null;
 const save = () => store.set("policies", policies);
 
-// ---------- 고치기 비밀번호 (지우기·수정 전에 한 번 묻기) ----------
-// 한 번 맞히면 5분 동안은 다시 안 물어요. 비밀번호는 저장할 때 해시로만 보관해요 (hashPin은 아래 잠금에 있어요)
+// ---------- 비밀번호 4자리: 앱 열 때 + 수정·지우기 할 때 ----------
+// 비밀번호는 하나(localStorage.pin, 해시). 언제 물을지는 스위치 두 개 (pinOpen, pinEdit — 기본은 둘 다 켜짐)
+// 예전에 따로 있던 "지우기·수정 비밀번호"(editPin)는 하나로 합쳐요
+(() => {
+  const old = store.get("editPin", null);
+  if (old) { if (!store.get("pin", null)) { store.set("pin", old); store.set("pinOpen", false); } localStorage.removeItem("editPin"); }
+})();
+const askOnOpen = () => !!store.get("pin", null) && store.get("pinOpen", true) !== false;
+const askOnEdit = () => !!store.get("pin", null) && store.get("pinEdit", true) !== false;
+// 수정·지우기 전에 물어요. 한 번 맞히면 5분 동안은 다시 안 물어요. force: 스위치와 상관없이 묻기 (설정 바꿀 때)
 let guardUntil = 0;
-function askEditPin() {
-  if (!store.get("editPin", null) || Date.now() < guardUntil) return Promise.resolve(true);
+function askEditPin(force) {
+  if (!store.get("pin", null) || (!force && !askOnEdit()) || Date.now() < guardUntil) return Promise.resolve(true);
   return new Promise((resolve) => {
     const box = $("#guard"), inp = $("#guardPin"), msg = $("#guardMsg");
     inp.value = ""; msg.textContent = ""; box.classList.remove("hidden"); setTimeout(() => inp.focus(), 50);
     const done = (ok) => { box.classList.add("hidden"); $("#guardOk").onclick = $("#guardCancel").onclick = inp.oninput = inp.onkeydown = null; resolve(ok); };
     const check = async () => {
-      if (pinOk(inp.value) && (await hashPin(inp.value)) === store.get("editPin", null)) { guardUntil = Date.now() + 5 * 60 * 1000; done(true); }
+      if (pinOk(inp.value) && (await hashPin(inp.value)) === store.get("pin", null)) { guardUntil = Date.now() + 5 * 60 * 1000; done(true); }
       else { msg.textContent = "비밀번호가 달라요"; inp.value = ""; }
     };
     $("#guardOk").onclick = check;
@@ -849,19 +857,32 @@ async function hashPin(pin) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 const pinOk = (v) => /^\d{4}$/.test(v);
-function showPinState() { $("#pinState").textContent = store.get("pin", null) ? "✅ 지금 잠금이 켜져 있어요" : "지금은 잠금이 꺼져 있어요"; }
+function showPinState() {
+  const on = !!store.get("pin", null);
+  $("#pinState").textContent = !on ? "지금은 비밀번호가 없어요" : "✅ 비밀번호가 있어요" + (askOnOpen() || askOnEdit() ? ` · ${[askOnOpen() && "앱 열 때", askOnEdit() && "수정·지우기 할 때"].filter(Boolean).join(", ")} 물어봐요` : " · 지금은 안 물어봐요");
+  $("#pinOpen").checked = store.get("pinOpen", true) !== false;
+  $("#pinEdit").checked = store.get("pinEdit", true) !== false;
+  $("#pinWhen").classList.toggle("hidden", !on);
+}
 $("#setPin").addEventListener("click", async () => {
-  if (!(await askEditPin())) return;
   const v = $("#sPin").value.trim();
   if (!pinOk(v)) return toast("숫자 4자리를 넣어주세요");
-  store.set("pin", await hashPin(v));
-  $("#sPin").value = ""; showPinState(); toast("잠금을 켰어요. 다음에 열 때 물어봐요");
+  if (!(await askEditPin(true))) return;
+  store.set("pin", await hashPin(v)); guardUntil = 0;
+  $("#sPin").value = ""; showPinState(); toast("비밀번호를 정했어요");
 });
 $("#removePin").addEventListener("click", async () => {
-  if (!store.get("pin", null)) return toast("잠금이 이미 꺼져 있어요");
-  if (!(await askEditPin())) return;
-  if (confirm("잠금을 끌까요?")) { localStorage.removeItem("pin"); showPinState(); toast("잠금을 껐어요"); }
+  if (!store.get("pin", null)) return toast("비밀번호가 이미 없어요");
+  if (!(await askEditPin(true))) return;
+  if (confirm("비밀번호를 없앨까요? (앱 열 때도, 수정·지우기 할 때도 안 물어봐요)")) { localStorage.removeItem("pin"); showPinState(); toast("비밀번호를 없앴어요"); }
 });
+for (const id of ["pinOpen", "pinEdit"]) {
+  $("#" + id).addEventListener("change", async (e) => {
+    const want = e.target.checked;
+    if (!want && !(await askEditPin(true))) { e.target.checked = true; return; }
+    store.set(id, want); showPinState(); toast(want ? "켰어요" : "껐어요");
+  });
+}
 async function tryUnlock() {
   const v = $("#lockPin").value.trim();
   if (pinOk(v) && (await hashPin(v)) === store.get("pin", null)) { $("#lock").classList.add("hidden"); $("#lockPin").value = ""; }
@@ -875,22 +896,8 @@ $("#lockForgot").addEventListener("click", async () => {
   try { indexedDB.deleteDatabase("insurance-files"); } catch {}
   location.reload();
 });
-if (store.get("pin", null)) { $("#lock").classList.remove("hidden"); setTimeout(() => $("#lockPin").focus(), 50); }
+if (askOnOpen()) { $("#lock").classList.remove("hidden"); setTimeout(() => $("#lockPin").focus(), 50); }
 showPinState();
-function showEditPinState() { $("#editPinState").textContent = store.get("editPin", null) ? "✅ 지금 켜져 있어요. 지우기·수정 전에 비밀번호를 물어봐요" : "지금은 꺼져 있어요"; }
-$("#setEditPin").addEventListener("click", async () => {
-  const v = $("#sEditPin").value.trim();
-  if (!pinOk(v)) return toast("숫자 4자리를 넣어주세요");
-  if (!(await askEditPin())) return;
-  store.set("editPin", await hashPin(v)); guardUntil = 0;
-  $("#sEditPin").value = ""; showEditPinState(); toast("이제 지우기·수정 전에 비밀번호를 물어봐요");
-});
-$("#removeEditPin").addEventListener("click", async () => {
-  if (!store.get("editPin", null)) return toast("이미 꺼져 있어요");
-  if (!(await askEditPin())) return;
-  if (confirm("지우기·수정 비밀번호를 끌까요?")) { localStorage.removeItem("editPin"); showEditPinState(); toast("껐어요"); }
-});
-showEditPinState();
 
 fillForm();
 renderHome();

@@ -742,22 +742,22 @@ $("#importData").addEventListener("change", async (e) => {
     const data = JSON.parse(await e.target.files[0].text());
     const list = Array.isArray(data) ? data : data && Array.isArray(data.policies) ? data.policies : null;
     if (!list) throw new Error();
-    // 앱에서 바꾼 이름은 지켜요: 이미 있는 보험인데 주인 이름이 다르면 앱의 이름을 써요
-    const renamed = {};
+    // 불러온 파일의 이름대로 해요. 같은 보험의 주인 이름이 바뀌면 예전 이름 카드는 빈 카드로 남기지 않아요
+    const renamed = {}; // 예전 이름 → 파일의 이름
     for (const p of list) {
       const old = policies.find((x) => x.id === p.id);
-      if (old && ownerOf(old) !== ownerOf(p)) { renamed[ownerOf(p)] = ownerOf(old); p.owner = old.owner; }
+      if (old && ownerOf(old) !== ownerOf(p)) renamed[ownerOf(old)] = ownerOf(p);
     }
     if (data.family && Array.isArray(data.family)) {
-      for (const m of data.family) if (m && !renamed[m] && !members().includes(m)) family.push(m);
+      for (const m of data.family) if (m && !members().includes(m)) family.push(m);
       saveFamily();
     }
     if (data.avatars && typeof data.avatars === "object") {
-      for (const [k, v] of Object.entries(data.avatars)) if (!renamed[k] && !avatars[k] && avatarId(v)) avatars[k] = avatarId(v);
+      for (const [k, v] of Object.entries(data.avatars)) if (!avatars[k] && avatarId(v)) avatars[k] = avatarId(v);
       saveAvatars();
     }
     if (Array.isArray(data.claims)) {
-      for (const c of data.claims) if (c && c.id && Array.isArray(c.companies) && !claims.some((x) => x.id === c.id)) { if (renamed[c.who]) c.who = renamed[c.who]; claims.push(c); }
+      for (const c of data.claims) if (c && c.id && Array.isArray(c.companies) && !claims.some((x) => x.id === c.id)) claims.push(c);
       saveClaims();
     }
     let added = 0, updated = 0;
@@ -770,6 +770,15 @@ $("#importData").addEventListener("change", async (e) => {
         policies[i] = p; updated++;
       } else { policies.push(p); added++; }
     }
+    // 이름이 바뀌어 보험이 0개가 된 예전 이름은 새 이름으로 옮겨요 (자리·캐릭터·청구할 일)
+    for (const [o, n] of Object.entries(renamed)) {
+      if (policies.some((x) => ownerOf(x) === o)) continue;
+      family = [...new Set(family.map((x) => (x === o ? n : x)))]; // 예전 이름 자리에 그대로
+      if (avatars[o] && !avatars[n]) avatars[n] = avatars[o];
+      delete avatars[o];
+      claims.forEach((c) => { if (c.who === o) c.who = n; });
+    }
+    saveFamily(); saveAvatars(); saveClaims();
     // 증권·약관 원본 파일이 들어 있으면 이 기기 파일 창고에 넣어요
     let fileCount = 0;
     for (const [key, f] of Object.entries((data && data.files) || {})) {

@@ -1,10 +1,10 @@
 // 인터넷이 없어도 앱이 열리게 해 주는 도우미 (서비스 워커)
 // 앱 파일만 기기에 보관해요. 보험 정보는 여기서 다루지 않고, 밖으로 보내지도 않아요.
 // 앱 파일을 고치면 아래 숫자(v)를 index.html의 ?v= 숫자와 같이 올려요.
-const CACHE = "app-v39";
+const CACHE = "app-v40";
 const FILES = [
-  "./", "./index.html", "./theme.js?v=38", "./privacy.html", "./styles.css?v=38",
-  "./kcd.js?v=38", "./engine.js?v=38", "./sample-data.js?v=38", "./templates.js?v=38", "./avatars.js?v=38", "./app.js?v=38",
+  "./", "./index.html", "./theme.js?v=39", "./privacy.html", "./styles.css?v=39",
+  "./kcd.js?v=39", "./engine.js?v=39", "./sample-data.js?v=39", "./templates.js?v=39", "./avatars.js?v=39", "./app.js?v=39",
   "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-180.png", "./icons/icon-192.png", "./icons/icon-512.png",
 ];
 
